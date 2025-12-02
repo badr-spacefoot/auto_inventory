@@ -68,7 +68,6 @@ try {
     exit 1
 }
 
-
 $webhookUrl = $config.webhook
 if ([string]::IsNullOrWhiteSpace($webhookUrl)) {
     Write-Host "====================================================" -ForegroundColor Red
@@ -317,4 +316,4 @@ if ($finalChoice -eq "[ VALIDER ]") {
 
 Write-Host ""
 Write-Host "Cette fenetre se fermera dans 10 secondes..." -ForegroundColor White
-Start-Sleep -Seconds 15
+Start-Sleep -Seconds 10

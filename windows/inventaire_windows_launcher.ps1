@@ -1,22 +1,28 @@
 # =====================================================================
 #   INVENTAIRE WINDOWS - Launcher Git (FORCE ONLINE + CONFIGDIR)
+#   Version : simple (sans nocache)
 # =====================================================================
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-# Base URL RAW GitHub (ne pas modifier)
-$baseUrl   = "https://raw.githubusercontent.com/badr-spacefoot/auto_inventory/main/windows/inventaire_windows_core.ps1"
-$timestamp = [DateTime]::UtcNow.Ticks
-$scriptUrl = "$baseUrl?nocache=$timestamp"
+# URL RAW GitHub (ne pas modifier)
+$scriptUrl = "https://raw.githubusercontent.com/badr-spacefoot/auto_inventory/main/windows/inventaire_windows_core.ps1"
 
 Write-Host "===================================================="
 Write-Host "  Inventaire Windows - Launcher (Git)" -ForegroundColor Cyan
 Write-Host "===================================================="
 Write-Host ""
 Write-Host "Fetching latest core script from GitHub..." -ForegroundColor Yellow
-Write-Host "URL: $baseUrl" -ForegroundColor DarkGray
+Write-Host "URL: $scriptUrl" -ForegroundColor DarkGray
 Write-Host ""
+
+# Vérifier que l'URL est bien correcte pour .NET
+if (-not [Uri]::IsWellFormedUriString($scriptUrl, [UriKind]::Absolute)) {
+    Write-Host "❌ ERREUR: L'URL n'est pas valide pour .NET" -ForegroundColor Red
+    Start-Sleep -Seconds 10
+    exit 1
+}
 
 try {
     $response = Invoke-WebRequest -Uri $scriptUrl -UseBasicParsing -ErrorAction Stop
@@ -50,6 +56,7 @@ catch {
     Write-Host "❌ ERROR: Problem while downloading or executing the core script." -ForegroundColor Red
     Write-Host $_.Exception.Message -ForegroundColor DarkGray
     Write-Host ""
-    Write-Host "If the problem persists, contact the IT team." -ForegroundColor Yellow
+    Write-Host "If the problem persists, open this URL in your browser on this PC :" -ForegroundColor Yellow
+    Write-Host "https://raw.githubusercontent.com/badr-spacefoot/auto_inventory/main/windows/inventaire_windows_core.ps1" -ForegroundColor White
     Start-Sleep -Seconds 15
 }

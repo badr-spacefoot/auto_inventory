@@ -1,26 +1,34 @@
 # =====================================================================
-#   INVENTAIRE WINDOWS - Launcher Git (FORCE ONLINE)
-#   Rôle : récupérer TOUJOURS la dernière version du script core
-#          sur GitHub et l'exécuter. Aucun fallback local.
+#   INVENTAIRE WINDOWS - Launcher Git (debug simple)
 # =====================================================================
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-# Construction de l'URL RAW avec anti-cache (?nocache=<timestamp>)
-$timestamp = [DateTime]::UtcNow.Ticks
-$baseUrl   = "https://raw.githubusercontent.com/badr-spacefoot/auto_inventory/main/windows/inventaire_windows_core.ps1"
-$scriptUrl = "$baseUrl?nocache=$timestamp"
+# Forcer TLS 1.2 (souvent nécessaire sur les vieux Windows)
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+# URL RAW EXACTE (A NE PAS MODIFIER)
+$scriptUrl = "https://raw.githubusercontent.com/badr-spacefoot/auto_inventory/main/windows/inventaire_windows_core.ps1"
 
 Write-Host "===================================================="
-Write-Host "  Inventaire Windows - Launcher (Git)" -ForegroundColor Cyan
+Write-Host "  Inventaire Windows - Launcher (Git DEBUG)" -ForegroundColor Cyan
 Write-Host "===================================================="
 Write-Host ""
-Write-Host "Fetching latest core script from GitHub..." -ForegroundColor Yellow
-Write-Host "URL: $baseUrl" -ForegroundColor DarkGray
+Write-Host "URL utilisee :" -ForegroundColor Yellow
+Write-Host "[$scriptUrl]" -ForegroundColor White
 Write-Host ""
+
+# Vérifier que l'URL est bien valide pour .NET
+if (-not [Uri]::IsWellFormedUriString($scriptUrl, [UriKind]::Absolute)) {
+    Write-Host "❌ ERREUR: L'URL N'EST PAS CONSIDEREE COMME VALIDE PAR .NET" -ForegroundColor Red
+    Start-Sleep -Seconds 10
+    exit 1
+} else {
+    Write-Host "✅ URL valide pour .NET, tentative de téléchargement..." -ForegroundColor Green
+    Write-Host ""
+}
 
 try {
-    # Récupérer le contenu du script core depuis GitHub (toujours en ligne)
     $response = Invoke-WebRequest -Uri $scriptUrl -UseBasicParsing -ErrorAction Stop
     $scriptContent = $response.Content
 
@@ -28,29 +36,26 @@ try {
         throw "Le script distant est vide ou n'a pas pu etre lu."
     }
 
-    # Calcul du hash SHA-256 pour vérification
+    # Petit hash pour debug
     $sha256 = New-Object System.Security.Cryptography.SHA256Managed
     $hashBytes = $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($scriptContent))
     $hashString = ([System.BitConverter]::ToString($hashBytes)).Replace("-", "")
 
-    Write-Host "Successfully fetched latest core from GitHub." -ForegroundColor Green
+    Write-Host "✅ Script recupere depuis GitHub." -ForegroundColor Green
     Write-Host "Core SHA-256 : $hashString" -ForegroundColor Magenta
     Write-Host ""
 
-    # Marqueur pour empêcher l'exécution directe du core
+    # Marqueur pour le core
     $env:SPACEFOOT_INVENTAIRE = "1"
-
-    # Exécution du script core en mémoire
     Invoke-Expression $scriptContent
-
-    # Nettoyage du marqueur
     $env:SPACEFOOT_INVENTAIRE = $null
 }
 catch {
     Write-Host ""
-    Write-Host "⚠ ERROR: Unable to fetch core script from GitHub." -ForegroundColor Red
+    Write-Host "❌ ERROR: Unable to fetch core script from GitHub." -ForegroundColor Red
     Write-Host $_.Exception.Message -ForegroundColor DarkGray
     Write-Host ""
-    Write-Host "Please try again later or contact the IT team." -ForegroundColor Yellow
-    Start-Sleep -Seconds 10
+    Write-Host "Test reseau : ouvrez cette URL dans un navigateur sur ce PC :" -ForegroundColor Yellow
+    Write-Host "https://raw.githubusercontent.com/badr-spacefoot/auto_inventory/main/windows/inventaire_windows_core.ps1" -ForegroundColor White
+    Start-Sleep -Seconds 15
 }

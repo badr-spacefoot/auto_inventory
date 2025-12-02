@@ -1,10 +1,16 @@
 # =====================================================================
 #   INVENTAIRE WINDOWS - Script principal (core)
-#   Version : v1.0
+#   Version : v1.1 (UX rouge/blanc style BIOS)
 #   Auteur  : Spacefoot / Badr
 # =====================================================================
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+# Palette globale style "BIOS" (fond noir, texte blanc)
+$rawUI = $Host.UI.RawUI
+$rawUI.BackgroundColor = 'Black'
+$rawUI.ForegroundColor = 'White'
+Clear-Host
 
 # =====================================================================
 #   CHARGEMENT CONFIG (webhook dans config_inventory.json)
@@ -12,8 +18,11 @@
 $configPath = Join-Path $PSScriptRoot "config_inventory.json"
 
 if (!(Test-Path $configPath)) {
-    Write-Host "ERROR: Missing configuration file 'config_inventory.json'." -ForegroundColor Red
-    Write-Host "Please add it next to this script." -ForegroundColor Yellow
+    Write-Host "====================================================" -ForegroundColor Red
+    Write-Host "  ERREUR CONFIG" -ForegroundColor Red
+    Write-Host "====================================================" -ForegroundColor Red
+    Write-Host "Fichier 'config_inventory.json' introuvable." -ForegroundColor White
+    Write-Host "Ajoutez-le dans le meme dossier que ce script." -ForegroundColor White
     Start-Sleep -Seconds 10
     exit 1
 }
@@ -23,21 +32,26 @@ try {
     $config = $configJson | ConvertFrom-Json
     $webhookUrl = $config.webhook
 } catch {
-    Write-Host "ERROR: Unable to read or parse 'config_inventory.json'." -ForegroundColor Red
-    Write-Host $_.Exception.Message
+    Write-Host "====================================================" -ForegroundColor Red
+    Write-Host "  ERREUR LECTURE CONFIG" -ForegroundColor Red
+    Write-Host "====================================================" -ForegroundColor Red
+    Write-Host "Impossible de lire ou parser 'config_inventory.json'." -ForegroundColor White
+    Write-Host $_.Exception.Message -ForegroundColor DarkGray
     Start-Sleep -Seconds 10
     exit 1
 }
 
 if ([string]::IsNullOrWhiteSpace($webhookUrl)) {
-    Write-Host "ERROR: 'webhook' is missing or empty in config_inventory.json." -ForegroundColor Red
+    Write-Host "====================================================" -ForegroundColor Red
+    Write-Host "  ERREUR CONFIG" -ForegroundColor Red
+    Write-Host "====================================================" -ForegroundColor Red
+    Write-Host "La cle 'webhook' est absente ou vide dans config_inventory.json." -ForegroundColor White
     Start-Sleep -Seconds 10
     exit 1
 }
 
 # =====================================================================
-#   FONCTION MENU BIOS-LIKE (fleches + Entrée)
-#   Possibilite d'afficher un header custom via -PreRender
+#   FONCTION MENU BIOS-LIKE (fleches + Entree)
 # =====================================================================
 function Show-Menu {
     param(
@@ -54,20 +68,22 @@ function Show-Menu {
         if ($PreRender) {
             & $PreRender
         } else {
-            Write-Host "===================================================="
-            Write-Host "  $Title"
-            Write-Host "===================================================="
+            Write-Host "====================================================" -ForegroundColor Red
+            Write-Host ("  " + $Title) -ForegroundColor White
+            Write-Host "====================================================" -ForegroundColor Red
             Write-Host ""
         }
 
-        Write-Host " Utilisez les fleches HAUT/BAS puis ENTREE pour valider"
+        Write-Host " Utilisez les fleches HAUT/BAS puis ENTREE pour valider" -ForegroundColor White
         Write-Host ""
 
         for ($i = 0; $i -lt $Options.Length; $i++) {
             if ($i -eq $index) {
-                Write-Host ("> " + $Options[$i]) -ForegroundColor Yellow
+                # Option selectionnee : fond rouge, texte blanc
+                Write-Host (" > " + $Options[$i]) -ForegroundColor White -BackgroundColor DarkRed
+                $rawUI.BackgroundColor = 'Black' # reset line following
             } else {
-                Write-Host ("  " + $Options[$i])
+                Write-Host ("   " + $Options[$i]) -ForegroundColor White
             }
         }
 
@@ -104,15 +120,20 @@ En continuant, vous acceptez de participer a cet inventaire.
 ====================================================
 "@
 
-Clear-Host
-Write-Host $infoMessage -ForegroundColor Cyan
+Write-Host "====================================================" -ForegroundColor Red
+Write-Host "   INVENTAIRE INFORMATIQUE - SPACEFOOT" -ForegroundColor White
+Write-Host "====================================================" -ForegroundColor Red
+Write-Host ""
+Write-Host $infoMessage -ForegroundColor White
 Start-Sleep -Seconds 2
 
 # =====================================================================
 #   IDENTITE UTILISATEUR
 # =====================================================================
+Write-Host "----------------- IDENTITE UTILISATEUR -----------------" -ForegroundColor Red
 $firstName = Read-Host "Entrez votre prenom / Enter your first name"
 $lastName  = Read-Host "Entrez votre nom / Enter your last name"
+Write-Host ""
 
 # Normalisation prenom/nom
 if (-not [string]::IsNullOrWhiteSpace($firstName)) {
@@ -182,6 +203,9 @@ $siteLabel = switch -Regex ($siteChoice) {
 # =====================================================================
 #   COLLECTE INFOS MACHINE
 # =====================================================================
+Write-Host ""
+Write-Host "----------------- COLLECTE DES INFORMATIONS TECHNIQUES -----------------" -ForegroundColor Red
+
 $PCName = $env:COMPUTERNAME
 $User   = $env:USERNAME
 
@@ -249,9 +273,13 @@ Adresse MAC     : $MAC
 $confirmOptions = @("[ VALIDER ]", "[ ANNULER ]")
 
 $preRenderConfirm = {
-    Write-Host $recap -ForegroundColor Yellow
+    Write-Host "====================================================" -ForegroundColor Red
+    Write-Host "   CONFIRMATION AVANT ENVOI" -ForegroundColor White
+    Write-Host "====================================================" -ForegroundColor Red
     Write-Host ""
-    Write-Host "Confirmez-vous l'envoi de ces informations ?" -ForegroundColor Cyan
+    Write-Host $recap -ForegroundColor White
+    Write-Host ""
+    Write-Host "Confirmez-vous l'envoi de ces informations ?" -ForegroundColor White
     Write-Host ""
 }
 
@@ -265,7 +293,7 @@ if ($finalChoice -eq "[ VALIDER ]") {
     } catch {
         Write-Host ""
         Write-Host "[ERREUR] Impossible d'envoyer l'inventaire." -ForegroundColor Red
-        Write-Host $_.Exception.Message
+        Write-Host $_.Exception.Message -ForegroundColor DarkGray
     }
 } else {
     Write-Host ""
@@ -273,5 +301,5 @@ if ($finalChoice -eq "[ VALIDER ]") {
 }
 
 Write-Host ""
-Write-Host "Cette fenetre se fermera dans 10 secondes..."
+Write-Host "Cette fenetre se fermera dans 10 secondes..." -ForegroundColor White
 Start-Sleep -Seconds 10

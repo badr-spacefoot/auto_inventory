@@ -35,14 +35,22 @@ Start-Sleep -Milliseconds 700
 # =====================================================================
 #   CHARGEMENT CONFIG (webhook + listes teams/sites)
 # =====================================================================
-$configPath = Join-Path $PSScriptRoot "config_inventory.json"
+
+# On récupère le dossier indiqué par le launcher
+$baseDir = $env:SPACEFOOT_CONFIGDIR
+if ([string]::IsNullOrWhiteSpace($baseDir)) {
+    # Fallback ultime : répertoire courant
+    $baseDir = (Get-Location).Path
+}
+
+$configPath = Join-Path $baseDir "config_inventory.json"
 
 if (!(Test-Path $configPath)) {
     Write-Host "====================================================" -ForegroundColor Red
     Write-Host "  ERREUR CONFIG" -ForegroundColor Red
     Write-Host "====================================================" -ForegroundColor Red
     Write-Host "Fichier 'config_inventory.json' introuvable." -ForegroundColor White
-    Write-Host "Ajoutez-le dans le meme dossier que ce script." -ForegroundColor White
+    Write-Host "Ajoutez-le dans le meme dossier que le launcher." -ForegroundColor White
     Start-Sleep -Seconds 10
     exit 1
 }
@@ -59,6 +67,7 @@ try {
     Start-Sleep -Seconds 10
     exit 1
 }
+
 
 $webhookUrl = $config.webhook
 if ([string]::IsNullOrWhiteSpace($webhookUrl)) {

@@ -1,12 +1,15 @@
 # =====================================================================
 #   INVENTAIRE WINDOWS - Script principal (core)
-#   Version : v1.2.0 - 2025-12-02
+#   Version : v1.2.1 - 2025-12-02
 #   Auteur  : Spacefoot / Badr
 # =====================================================================
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-# Sécurité : le core doit être lancé via le launcher (qui définit SPACEFOOT_INVENTAIRE=1)
+# ---------------------------------------------------------------------
+#  Sécurité : le core doit être lancé via le launcher
+#  (le launcher définit SPACEFOOT_INVENTAIRE=1 avant Invoke-Expression)
+# ---------------------------------------------------------------------
 if ($env:SPACEFOOT_INVENTAIRE -ne "1") {
     Write-Host "====================================================" -ForegroundColor Red
     Write-Host "  EXECUTION NON AUTORISEE" -ForegroundColor Red
@@ -24,7 +27,7 @@ $rawUI.ForegroundColor = 'White'
 Clear-Host
 
 # Affichage de la version du core
-$VERSION = "v1.2.0 - 2025-12-02"
+$VERSION = "v1.2.1 - 2025-12-02"
 Write-Host "Loaded INVENTORY CORE version: $VERSION" -ForegroundColor Cyan
 Write-Host ""
 Start-Sleep -Milliseconds 700
@@ -67,32 +70,27 @@ if ([string]::IsNullOrWhiteSpace($webhookUrl)) {
     exit 1
 }
 
-# Listes dynamiques avec fallback
-$teams = @()
-if ($config.teams -and $config.teams.Count -gt 0) {
-    $teams = @($config.teams)
-} else {
-    $teams = @("B2C","DG","MP","Pub","Cata","Design","Compta","RH")
+# Listes dynamiques OBLIGATOIRES (uniquement depuis config_inventory.json)
+if (-not $config.teams -or $config.teams.Count -eq 0) {
+    Write-Host "ERREUR: aucune 'team' definie dans config_inventory.json." -ForegroundColor Red
+    Write-Host "Ajoutez un tableau 'teams' dans le fichier de config." -ForegroundColor Yellow
+    Start-Sleep -Seconds 10
+    exit 1
 }
 
-$sites = @()
-if ($config.sites -and $config.sites.Count -gt 0) {
-    $sites = @($config.sites)
-} else {
-    $sites = @(
-        "Siège social :  Levallois-Perret",
-        "R&D / Design : Charleville-Mézières",
-        "Entrepôt logistique : Montlouis-sur-Loire",
-        "Boutique : Boulevard-du-Golf (BDG)",
-        "Boutique : Endurance-Store (ES)",
-        "Boutique : Foot-Store (FS)",
-        "Boutique : Paris-Ventoux-Cycles (PVC)",
-        "Boutique : Sport-et-Loisirs (SEL)"
-    )
+if (-not $config.sites -or $config.sites.Count -eq 0) {
+    Write-Host "ERREUR: aucun 'site' defini dans config_inventory.json." -ForegroundColor Red
+    Write-Host "Ajoutez un tableau 'sites' dans le fichier de config." -ForegroundColor Yellow
+    Start-Sleep -Seconds 10
+    exit 1
 }
+
+$teams = @($config.teams)
+$sites = @($config.sites)
 
 # =====================================================================
 #   FONCTION MENU BIOS-LIKE (fleches + Entrée)
+#   Retourne : [ indexSelectionne , texteSelectionne ]
 # =====================================================================
 function Show-Menu {
     param(
@@ -165,7 +163,7 @@ Write-Host "   INVENTAIRE INFORMATIQUE - SPACEFOOT" -ForegroundColor White
 Write-Host "====================================================" -ForegroundColor Red
 Write-Host ""
 Write-Host $infoMessage -ForegroundColor White
-Start-Sleep -Seconds 2000
+Start-Sleep -Seconds 2
 
 # =====================================================================
 #   IDENTITE UTILISATEUR
@@ -310,4 +308,4 @@ if ($finalChoice -eq "[ VALIDER ]") {
 
 Write-Host ""
 Write-Host "Cette fenetre se fermera dans 10 secondes..." -ForegroundColor White
-Start-Sleep -Seconds 10
+Start-Sleep -Seconds 15

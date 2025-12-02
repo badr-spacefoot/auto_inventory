@@ -37,7 +37,7 @@ try {
 
     # Marqueurs pour le core
     $env:SPACEFOOT_INVENTAIRE = "1"
-    $env:SPACEFOOT_CONFIGDIR  = $PSScriptRoot   # <<< Dossier où se trouve le launcher + config
+    $env:SPACEFOOT_CONFIGDIR  = $PSScriptRoot   # dossier où se trouve le launcher + config_inventory.json
 
     Invoke-Expression $scriptContent
 

@@ -1,16 +1,13 @@
 # =====================================================================
-#   INVENTAIRE WINDOWS - Launcher Git
-#   Rôle  : récupérer la dernière version du script core sur GitHub
-#           et l'exécuter.
+#   INVENTAIRE WINDOWS - Launcher Git (FORCE ONLINE)
+#   Rôle  : récupérer TOUJOURS la dernière version du script core
+#           sur GitHub et l'exécuter. Aucun fallback local.
 # =====================================================================
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 # URL du script "core" hébergé sur GitHub (RAW)
 $scriptUrl  = "https://raw.githubusercontent.com/badr-spacefoot/auto_inventory/main/windows/inventaire_windows_core.ps1"
-
-# Chemin vers un éventuel core local de secours (dans le même dossier que le launcher)
-$localCore  = Join-Path $PSScriptRoot "inventaire_windows_core.ps1"
 
 Write-Host "===================================================="
 Write-Host "  Inventaire Windows - Launcher (Git)" -ForegroundColor Cyan
@@ -28,6 +25,7 @@ try {
     }
 
     Write-Host "Script récupéré depuis GitHub. Exécution..." -ForegroundColor Green
+
     # Exécuter le script directement en mémoire
     Invoke-Expression $scriptContent
 }
@@ -35,15 +33,7 @@ catch {
     Write-Host ""
     Write-Host "⚠ Impossible de récupérer le script sur GitHub." -ForegroundColor Red
     Write-Host $_.Exception.Message
-
-    if (Test-Path $localCore) {
-        Write-Host ""
-        Write-Host "Utilisation de la version locale de secours : $localCore" -ForegroundColor Yellow
-        & $localCore
-    } else {
-        Write-Host ""
-        Write-Host "Aucune version locale de secours n'a été trouvée." -ForegroundColor Red
-        Write-Host "Veuillez contacter l'équipe IT." -ForegroundColor Yellow
-        Start-Sleep -Seconds 10
-    }
+    Write-Host ""
+    Write-Host "Veuillez réessayer plus tard ou contacter l'équipe IT." -ForegroundColor Yellow
+    Start-Sleep -Seconds 10
 }

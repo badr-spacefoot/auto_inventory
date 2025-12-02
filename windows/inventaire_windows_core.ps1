@@ -131,26 +131,81 @@ function Show-MenuCentered {
     )
 
     $index = 0
+
     while ($true) {
         Clear-Host
-        Draw-TitleBar $Title
-        if ($Subtitle) {
-            Center-Write $Subtitle ([ConsoleColor]::Gray)
-            Write-Host ""
+
+        $screenWidth  = $Host.UI.RawUI.WindowSize.Width
+        $screenHeight = $Host.UI.RawUI.WindowSize.Height
+
+        # Determine box width based on longest text
+        $maxLen = $Title.Length
+        if ($Subtitle) { if ($Subtitle.Length -gt $maxLen) { $maxLen = $Subtitle.Length } }
+        foreach ($o in $Options) {
+            if ($o.Length -gt $maxLen) { $maxLen = $o.Length }
         }
 
-        Center-Write "Utilisez les fleches HAUT/BAS puis ENTREE pour valider" ([ConsoleColor]::White)
-        Write-Host ""
+        $innerWidth = [Math]::Min($maxLen + 4, $screenWidth - 10)   # inside box
+        $boxWidth   = $innerWidth + 2                               # borders
+        $leftMargin = [Math]::Floor(($screenWidth - $boxWidth) / 2)
 
+        # Approx total lines of the box (top + title + subtitle + blank + options + bottom)
+        $totalLines = 5 + $Options.Count
+        $topPadding = [Math]::Max(0, [Math]::Floor(($screenHeight - $totalLines) / 2))
+
+        # Helper to center a text inside the box inner width
+        function _pad-inner([string]$text, [int]$w) {
+            if ($null -eq $text) { $text = "" }
+            if ($text.Length -gt $w) { $text = $text.Substring(0, $w) }
+            $padLeft  = [Math]::Floor(($w - $text.Length) / 2)
+            $padRight = $w - $padLeft - $text.Length
+            return (" " * $padLeft) + $text + (" " * $padRight)
+        }
+
+        # Vertical padding to center
+        for ($i = 0; $i -lt $topPadding; $i++) { Write-Host "" }
+
+        $topLine    = "╔" + ("═" * $innerWidth) + "╗"
+        $bottomLine = "╚" + ("═" * $innerWidth) + "╝"
+
+        Write-Host (" " * $leftMargin + $topLine) -ForegroundColor DarkRed
+
+        # Title line
+        $titleInner = _pad-inner $Title $innerWidth
+        Write-Host (" " * $leftMargin + "║" + $titleInner + "║")
+
+        # Subtitle (optional)
+        if ($Subtitle) {
+            $subInner = _pad-inner $Subtitle $innerWidth
+            Write-Host (" " * $leftMargin + "║" + $subInner + "║")
+        }
+
+        # Blank line
+        Write-Host (" " * $leftMargin + "║" + (" " * $innerWidth) + "║")
+
+        # Options
         for ($i = 0; $i -lt $Options.Length; $i++) {
-            $label = $Options[$i]
+            $opt = _pad-inner $Options[$i] $innerWidth
+
             if ($i -eq $index) {
-                Center-Write (" > " + $label + " < ") ([ConsoleColor]::Black) ([ConsoleColor]::DarkRed)
+                # Selected option: highlight only inside the box
+                Write-Host (" " * $leftMargin + "║") -NoNewline
+                Write-Host $opt -ForegroundColor Black -BackgroundColor DarkRed -NoNewline
+                Write-Host "║"
             } else {
-                Center-Write ("   " + $label + "   ") ([ConsoleColor]::White)
+                Write-Host (" " * $leftMargin + "║" + $opt + "║")
             }
         }
 
+        Write-Host (" " * $leftMargin + $bottomLine) -ForegroundColor DarkRed
+
+        # Little hint below
+        Write-Host ""
+        $hint = "Utilisez les fleches HAUT/BAS puis ENTREE pour valider"
+        $hintPad = [Math]::Floor(($screenWidth - $hint.Length) / 2)
+        Write-Host ((" " * $hintPad) + $hint)
+
+        # Keyboard handling
         $key = [Console]::ReadKey($true)
         switch ($key.Key) {
             "UpArrow"   { if ($index -gt 0) { $index-- } else { $index = $Options.Length - 1 } }

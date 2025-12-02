@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM  Inventaire Windows - Launcher batch (DEBUG)
+REM  Inventaire Windows - Launcher batch (DEBUG FRIENDLY)
 REM ============================================================
 
 chcp 65001 >nul

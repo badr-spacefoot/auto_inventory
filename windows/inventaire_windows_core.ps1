@@ -1,19 +1,19 @@
 # =====================================================================
 #   INVENTAIRE WINDOWS - Script principal (core)
-#   Version : v1.1 (UX rouge/blanc style BIOS)
+#   Version : v1.2 (UX rouge/blanc, listes dynamiques)
 #   Auteur  : Spacefoot / Badr
 # =====================================================================
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-# Palette globale style "BIOS" (fond noir, texte blanc)
+# Palette globale style "BIOS"
 $rawUI = $Host.UI.RawUI
 $rawUI.BackgroundColor = 'Black'
 $rawUI.ForegroundColor = 'White'
 Clear-Host
 
 # =====================================================================
-#   CHARGEMENT CONFIG (webhook dans config_inventory.json)
+#   CHARGEMENT CONFIG (webhook + listes teams/sites)
 # =====================================================================
 $configPath = Join-Path $PSScriptRoot "config_inventory.json"
 
@@ -30,7 +30,6 @@ if (!(Test-Path $configPath)) {
 try {
     $configJson = Get-Content $configPath -Raw
     $config = $configJson | ConvertFrom-Json
-    $webhookUrl = $config.webhook
 } catch {
     Write-Host "====================================================" -ForegroundColor Red
     Write-Host "  ERREUR LECTURE CONFIG" -ForegroundColor Red
@@ -41,6 +40,7 @@ try {
     exit 1
 }
 
+$webhookUrl = $config.webhook
 if ([string]::IsNullOrWhiteSpace($webhookUrl)) {
     Write-Host "====================================================" -ForegroundColor Red
     Write-Host "  ERREUR CONFIG" -ForegroundColor Red
@@ -50,8 +50,32 @@ if ([string]::IsNullOrWhiteSpace($webhookUrl)) {
     exit 1
 }
 
+# Listes dynamiques (avec fallback si jamais vide)
+$teams = @()
+if ($config.teams -and $config.teams.Count -gt 0) {
+    $teams = @($config.teams)
+} else {
+    $teams = @("B2C","DG","MP","Pub","Cata","Design","Compta","RH")
+}
+
+$sites = @()
+if ($config.sites -and $config.sites.Count -gt 0) {
+    $sites = @($config.sites)
+} else {
+    $sites = @(
+        "Siège social :  Levallois-Perret",
+        "R&D / Design : Charleville-Mézières",
+        "Entrepôt logistique : Montlouis-sur-Loire",
+        "Boutique : Boulevard-du-Golf (BDG)",
+        "Boutique : Endurance-Store (ES)",
+        "Boutique : Foot-Store (FS)",
+        "Boutique : Paris-Ventoux-Cycles (PVC)",
+        "Boutique : Sport-et-Loisirs (SEL)"
+    )
+}
+
 # =====================================================================
-#   FONCTION MENU BIOS-LIKE (fleches + Entree)
+#   FONCTION MENU BIOS-LIKE (fleches + Entrée)
 # =====================================================================
 function Show-Menu {
     param(
@@ -79,9 +103,8 @@ function Show-Menu {
 
         for ($i = 0; $i -lt $Options.Length; $i++) {
             if ($i -eq $index) {
-                # Option selectionnee : fond rouge, texte blanc
                 Write-Host (" > " + $Options[$i]) -ForegroundColor White -BackgroundColor DarkRed
-                $rawUI.BackgroundColor = 'Black' # reset line following
+                $rawUI.BackgroundColor = 'Black'
             } else {
                 Write-Host ("   " + $Options[$i]) -ForegroundColor White
             }
@@ -91,7 +114,7 @@ function Show-Menu {
         switch ($key.Key) {
             "UpArrow"   { if ($index -gt 0) { $index-- } else { $index = $Options.Length - 1 } }
             "DownArrow" { if ($index -lt $Options.Length - 1) { $index++ } else { $index = 0 } }
-            "Enter"     { return $Options[$index] }
+            "Enter"     { return ,@($index, $Options[$index]) } # retourne index + texte
         }
     }
 }
@@ -135,7 +158,6 @@ $firstName = Read-Host "Entrez votre prenom / Enter your first name"
 $lastName  = Read-Host "Entrez votre nom / Enter your last name"
 Write-Host ""
 
-# Normalisation prenom/nom
 if (-not [string]::IsNullOrWhiteSpace($firstName)) {
     $ti = [System.Globalization.CultureInfo]::InvariantCulture.TextInfo
     $firstName = $ti.ToTitleCase($firstName.ToLower())
@@ -145,60 +167,29 @@ if (-not [string]::IsNullOrWhiteSpace($lastName)) {
 }
 
 # =====================================================================
-#   TEAM (menu fleches)
+#   TEAM (menu, construit à partir de $teams)
 # =====================================================================
-$teamOptions = @(
-    "1 - B2C",
-    "2 - DG",
-    "3 - MP",
-    "4 - Pub",
-    "5 - Cata",
-    "6 - Design",
-    "7 - Compta",
-    "8 - RH"
-)
-
-$teamChoice = Show-Menu -Title "Selectionnez votre Team / Select your team" -Options $teamOptions
-
-$teamLabel = switch -Regex ($teamChoice) {
-    "^1" { "B2C" }
-    "^2" { "DG" }
-    "^3" { "MP" }
-    "^4" { "Pub" }
-    "^5" { "Cata" }
-    "^6" { "Design" }
-    "^7" { "Compta" }
-    "^8" { "RH" }
-    default { "" }
+# On génère automatiquement "1 - B2C", "2 - DG", etc.
+$teamOptions = @()
+for ($i = 0; $i -lt $teams.Count; $i++) {
+    $teamOptions += ("{0} - {1}" -f ($i + 1), $teams[$i])
 }
 
-# =====================================================================
-#   ETABLISSEMENT (menu fleches)
-# =====================================================================
-$siteOptions = @(
-    "1 - Siege social :  Levallois-Perret",
-    "2 - R&D / Design : Charleville-Mezieres",
-    "3 - Entrepot logistique : Montlouis-sur-Loire",
-    "4 - Boutique : Boulevard-du-Golf (BDG)",
-    "5 - Boutique : Endurance-Store (ES)",
-    "6 - Boutique : Foot-Store (FS)",
-    "7 - Boutique : Paris-Ventoux-Cycles (PVC)",
-    "8 - Boutique : Sport-et-Loisirs (SEL)"
-)
+$teamResult = Show-Menu -Title "Selectionnez votre Team / Select your team" -Options $teamOptions
+$teamIndex  = $teamResult[0]
+$teamLabel  = $teams[$teamIndex]
 
-$siteChoice = Show-Menu -Title "Selectionnez votre etablissement / Select your site" -Options $siteOptions
-
-$siteLabel = switch -Regex ($siteChoice) {
-    "^1" { "Siège social :  Levallois-Perret" }
-    "^2" { "R&D / Design : Charleville-Mézières" }
-    "^3" { "Entrepôt logistique : Montlouis-sur-Loire" }
-    "^4" { "Boutique : Boulevard-du-Golf (BDG)" }
-    "^5" { "Boutique : Endurance-Store (ES)" }
-    "^6" { "Boutique : Foot-Store (FS)" }
-    "^7" { "Boutique : Paris-Ventoux-Cycles (PVC)" }
-    "^8" { "Boutique : Sport-et-Loisirs (SEL)" }
-    default { "" }
+# =====================================================================
+#   ETABLISSEMENT (menu, construit à partir de $sites)
+# =====================================================================
+$siteOptions = @()
+for ($i = 0; $i -lt $sites.Count; $i++) {
+    $siteOptions += ("{0} - {1}" -f ($i + 1), $sites[$i])
 }
+
+$siteResult = Show-Menu -Title "Selectionnez votre etablissement / Select your site" -Options $siteOptions
+$siteIndex  = $siteResult[0]
+$siteLabel  = $sites[$siteIndex]
 
 # =====================================================================
 #   COLLECTE INFOS MACHINE
@@ -245,7 +236,7 @@ $body = @{
 } | ConvertTo-Json -Depth 5
 
 # =====================================================================
-#   RECAP + CONFIRMATION (menu fleches)
+#   RECAP + CONFIRMATION
 # =====================================================================
 $recap = @"
 =============== RECAPITULATIF ===============
@@ -283,7 +274,8 @@ $preRenderConfirm = {
     Write-Host ""
 }
 
-$finalChoice = Show-Menu -Title "" -Options $confirmOptions -PreRender $preRenderConfirm
+$confResult  = Show-Menu -Title "" -Options $confirmOptions -PreRender $preRenderConfirm
+$finalChoice = $confResult[1]
 
 if ($finalChoice -eq "[ VALIDER ]") {
     try {

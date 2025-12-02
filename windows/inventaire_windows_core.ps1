@@ -1,6 +1,6 @@
 # =====================================================================
 #   INVENTAIRE WINDOWS - Script principal (core)
-#   Version : v1.3.0 - 2025-12-02
+#   Version : v1.3.1 - 2025-12-03
 #   Auteur  : Spacefoot / Badr
 # =====================================================================
 
@@ -218,7 +218,7 @@ function Show-MenuCentered {
 # ---------------------------------------------------------------------
 #  Affichage version
 # ---------------------------------------------------------------------
-$VERSION = "v1.3.0 - 2025-12-02"
+$VERSION = "v1.3.1 - 2025-12-03"
 Draw-TitleBar "INVENTAIRE INFORMATIQUE - SPACEFOOT (CORE $VERSION)"
 Center-Write ""
 Start-Sleep -Milliseconds 700

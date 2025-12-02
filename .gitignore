@@ -1,6 +1,2 @@
 # Do NOT commit secret Webhook config
 windows/config_inventory.json
-
-# Optional: ignore any local-only files
-*.local
-*.secrets.json

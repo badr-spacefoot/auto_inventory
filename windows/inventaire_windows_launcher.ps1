@@ -7,7 +7,9 @@
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 # URL du script "core" hébergé sur GitHub (RAW)
-$scriptUrl  = "https://raw.githubusercontent.com/badr-spacefoot/auto_inventory/main/windows/inventaire_windows_core.ps1"
+$timestamp = [DateTime]::UtcNow.Ticks
+$scriptUrl  = "https://raw.githubusercontent.com/badr-spacefoot/auto_inventory/main/windows/inventaire_windows_core.ps1?nocache=$timestamp"
+
 
 Write-Host "===================================================="
 Write-Host "  Inventaire Windows - Launcher (Git)" -ForegroundColor Cyan

@@ -1,3 +1,25 @@
 {
-  "webhook": "https://script.google.com/macros/s/AKfycbzKsu2nnpP-gkXSSlJST7-0OXcKZP0Xc35KODA4IEj3G1glb2E3ds2EpiG2gUOkD5bf_g/exec"
+  "webhook": "https://script.google.com/macros/s/AKfycbzKsu2nnpP-gkXSSlJST7-0OXcKZP0Xc35KODA4IEj3G1glb2E3ds2EpiG2gUOkD5bf_g/exec",
+
+  "teams": [
+    "B2C",
+    "DG",
+    "MP",
+    "Pub",
+    "Cata",
+    "Design",
+    "Compta",
+    "RH"
+  ],
+
+  "sites": [
+    "Siège social :  Levallois-Perret",
+    "R&D / Design : Charleville-Mézières",
+    "Entrepôt logistique : Montlouis-sur-Loire",
+    "Boutique : Boulevard-du-Golf (BDG)",
+    "Boutique : Endurance-Store (ES)",
+    "Boutique : Foot-Store (FS)",
+    "Boutique : Paris-Ventoux-Cycles (PVC)",
+    "Boutique : Sport-et-Loisirs (SEL)"
+  ]
 }

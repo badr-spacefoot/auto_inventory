@@ -6,25 +6,60 @@
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-# ===== URL de la Web App Google =====
-$webhookUrl = "https://script.google.com/macros/s/AKfycbzKsu2nnpP-gkXSSlJST7-0OXcKZP0Xc35KODA4IEj3G1glb2E3ds2EpiG2gUOkD5bf_g/exec"
+# =====================================================================
+#   CHARGEMENT CONFIG (webhook dans config_inventory.json)
+# =====================================================================
+$configPath = Join-Path $PSScriptRoot "config_inventory.json"
+
+if (!(Test-Path $configPath)) {
+    Write-Host "ERROR: Missing configuration file 'config_inventory.json'." -ForegroundColor Red
+    Write-Host "Please add it next to this script." -ForegroundColor Yellow
+    Start-Sleep -Seconds 10
+    exit 1
+}
+
+try {
+    $configJson = Get-Content $configPath -Raw
+    $config = $configJson | ConvertFrom-Json
+    $webhookUrl = $config.webhook
+} catch {
+    Write-Host "ERROR: Unable to read or parse 'config_inventory.json'." -ForegroundColor Red
+    Write-Host $_.Exception.Message
+    Start-Sleep -Seconds 10
+    exit 1
+}
+
+if ([string]::IsNullOrWhiteSpace($webhookUrl)) {
+    Write-Host "ERROR: 'webhook' is missing or empty in config_inventory.json." -ForegroundColor Red
+    Start-Sleep -Seconds 10
+    exit 1
+}
 
 # =====================================================================
 #   FONCTION MENU BIOS-LIKE (fleches + Entrée)
+#   Possibilite d'afficher un header custom via -PreRender
 # =====================================================================
 function Show-Menu {
     param(
         [string]$Title,
-        [string[]]$Options
+        [string[]]$Options,
+        [scriptblock]$PreRender = $null
     )
 
     $index = 0
+
     while ($true) {
         Clear-Host
-        Write-Host "===================================================="
-        Write-Host "  $Title"
-        Write-Host "===================================================="
-        Write-Host ""
+
+        if ($PreRender) {
+            & $PreRender
+        } else {
+            Write-Host "===================================================="
+            Write-Host "  $Title"
+            Write-Host "===================================================="
+            Write-Host ""
+        }
+
         Write-Host " Utilisez les fleches HAUT/BAS puis ENTREE pour valider"
         Write-Host ""
 
@@ -76,15 +111,17 @@ Start-Sleep -Seconds 2
 # =====================================================================
 #   IDENTITE UTILISATEUR
 # =====================================================================
-$firstName = Read-Host "Entrez votre prenom"
-$lastName  = Read-Host "Entrez votre nom"
+$firstName = Read-Host "Entrez votre prenom / Enter your first name"
+$lastName  = Read-Host "Entrez votre nom / Enter your last name"
 
 # Normalisation prenom/nom
-if ($firstName) {
-    $firstName = $firstName.ToLower()
-    $firstName = [System.Globalization.CultureInfo]::InvariantCulture.TextInfo.ToTitleCase($firstName)
+if (-not [string]::IsNullOrWhiteSpace($firstName)) {
+    $ti = [System.Globalization.CultureInfo]::InvariantCulture.TextInfo
+    $firstName = $ti.ToTitleCase($firstName.ToLower())
 }
-$lastName = ($lastName | ForEach-Object { $_.ToUpper() })
+if (-not [string]::IsNullOrWhiteSpace($lastName)) {
+    $lastName = $lastName.ToUpper()
+}
 
 # =====================================================================
 #   TEAM (menu fleches)
@@ -100,7 +137,7 @@ $teamOptions = @(
     "8 - RH"
 )
 
-$teamChoice = Show-Menu -Title "Selectionnez votre Team" -Options $teamOptions
+$teamChoice = Show-Menu -Title "Selectionnez votre Team / Select your team" -Options $teamOptions
 
 $teamLabel = switch -Regex ($teamChoice) {
     "^1" { "B2C" }
@@ -128,7 +165,7 @@ $siteOptions = @(
     "8 - Boutique : Sport-et-Loisirs (SEL)"
 )
 
-$siteChoice = Show-Menu -Title "Selectionnez votre etablissement" -Options $siteOptions
+$siteChoice = Show-Menu -Title "Selectionnez votre etablissement / Select your site" -Options $siteOptions
 
 $siteLabel = switch -Regex ($siteChoice) {
     "^1" { "Siège social :  Levallois-Perret" }
@@ -184,7 +221,7 @@ $body = @{
 } | ConvertTo-Json -Depth 5
 
 # =====================================================================
-#   RECAP + CONFIRMATION
+#   RECAP + CONFIRMATION (menu fleches)
 # =====================================================================
 $recap = @"
 =============== RECAPITULATIF ===============
@@ -211,27 +248,28 @@ Adresse MAC     : $MAC
 
 $confirmOptions = @("[ VALIDER ]", "[ ANNULER ]")
 
-while ($true) {
-    Clear-Host
+$preRenderConfirm = {
     Write-Host $recap -ForegroundColor Yellow
-    $choice = Show-Menu -Title "Confirmez-vous l'envoi de ces informations ?" -Options $confirmOptions
+    Write-Host ""
+    Write-Host "Confirmez-vous l'envoi de ces informations ?" -ForegroundColor Cyan
+    Write-Host ""
+}
 
-    if ($choice -eq "[ VALIDER ]") {
-        try {
-            Invoke-RestMethod -Uri $webhookUrl -Method Post -Body $body -ContentType "application/json"
-            Write-Host ""
-            Write-Host "[OK] Inventaire envoye avec succes. Merci !" -ForegroundColor Green
-        } catch {
-            Write-Host ""
-            Write-Host "[ERREUR] Impossible d'envoyer l'inventaire." -ForegroundColor Red
-            Write-Host $_.Exception.Message
-        }
-        break
-    } else {
+$finalChoice = Show-Menu -Title "" -Options $confirmOptions -PreRender $preRenderConfirm
+
+if ($finalChoice -eq "[ VALIDER ]") {
+    try {
+        Invoke-RestMethod -Uri $webhookUrl -Method Post -Body $body -ContentType "application/json"
         Write-Host ""
-        Write-Host "Envoi annule par l'utilisateur." -ForegroundColor Red
-        break
+        Write-Host "[OK] Inventaire envoye avec succes. Merci !" -ForegroundColor Green
+    } catch {
+        Write-Host ""
+        Write-Host "[ERREUR] Impossible d'envoyer l'inventaire." -ForegroundColor Red
+        Write-Host $_.Exception.Message
     }
+} else {
+    Write-Host ""
+    Write-Host "Envoi annule par l'utilisateur." -ForegroundColor Red
 }
 
 Write-Host ""

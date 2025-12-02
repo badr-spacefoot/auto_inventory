@@ -1,16 +1,33 @@
 # =====================================================================
 #   INVENTAIRE WINDOWS - Script principal (core)
-#   Version : v1.2 (UX rouge/blanc, listes dynamiques)
+#   Version : v1.2.0 - 2025-12-02
 #   Auteur  : Spacefoot / Badr
 # =====================================================================
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+# Sécurité : le core doit être lancé via le launcher (qui définit SPACEFOOT_INVENTAIRE=1)
+if ($env:SPACEFOOT_INVENTAIRE -ne "1") {
+    Write-Host "====================================================" -ForegroundColor Red
+    Write-Host "  EXECUTION NON AUTORISEE" -ForegroundColor Red
+    Write-Host "====================================================" -ForegroundColor Red
+    Write-Host "Ce script doit etre lance via le launcher officiel." -ForegroundColor White
+    Write-Host "Veuillez utiliser le fichier .bat fourni par l'equipe IT." -ForegroundColor White
+    Start-Sleep -Seconds 8
+    exit 1
+}
 
 # Palette globale style "BIOS"
 $rawUI = $Host.UI.RawUI
 $rawUI.BackgroundColor = 'Black'
 $rawUI.ForegroundColor = 'White'
 Clear-Host
+
+# Affichage de la version du core
+$VERSION = "v1.2.0 - 2025-12-02"
+Write-Host "Loaded INVENTORY CORE version: $VERSION" -ForegroundColor Cyan
+Write-Host ""
+Start-Sleep -Milliseconds 700
 
 # =====================================================================
 #   CHARGEMENT CONFIG (webhook + listes teams/sites)
@@ -50,7 +67,7 @@ if ([string]::IsNullOrWhiteSpace($webhookUrl)) {
     exit 1
 }
 
-# Listes dynamiques (avec fallback si jamais vide)
+# Listes dynamiques avec fallback
 $teams = @()
 if ($config.teams -and $config.teams.Count -gt 0) {
     $teams = @($config.teams)
@@ -114,7 +131,7 @@ function Show-Menu {
         switch ($key.Key) {
             "UpArrow"   { if ($index -gt 0) { $index-- } else { $index = $Options.Length - 1 } }
             "DownArrow" { if ($index -lt $Options.Length - 1) { $index++ } else { $index = 0 } }
-            "Enter"     { return ,@($index, $Options[$index]) } # retourne index + texte
+            "Enter"     { return ,@($index, $Options[$index]) }
         }
     }
 }
@@ -148,7 +165,7 @@ Write-Host "   INVENTAIRE INFORMATIQUE - SPACEFOOT" -ForegroundColor White
 Write-Host "====================================================" -ForegroundColor Red
 Write-Host ""
 Write-Host $infoMessage -ForegroundColor White
-Start-Sleep -Seconds 2
+Start-Sleep -Seconds 2000
 
 # =====================================================================
 #   IDENTITE UTILISATEUR
@@ -167,9 +184,8 @@ if (-not [string]::IsNullOrWhiteSpace($lastName)) {
 }
 
 # =====================================================================
-#   TEAM (menu, construit à partir de $teams)
+#   TEAM (menu basé sur $teams)
 # =====================================================================
-# On génère automatiquement "1 - B2C", "2 - DG", etc.
 $teamOptions = @()
 for ($i = 0; $i -lt $teams.Count; $i++) {
     $teamOptions += ("{0} - {1}" -f ($i + 1), $teams[$i])
@@ -180,7 +196,7 @@ $teamIndex  = $teamResult[0]
 $teamLabel  = $teams[$teamIndex]
 
 # =====================================================================
-#   ETABLISSEMENT (menu, construit à partir de $sites)
+#   ETABLISSEMENT (menu basé sur $sites)
 # =====================================================================
 $siteOptions = @()
 for ($i = 0; $i -lt $sites.Count; $i++) {

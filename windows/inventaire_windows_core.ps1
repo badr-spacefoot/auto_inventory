@@ -56,7 +56,7 @@ if (!(Test-Path $configPath)) {
 }
 
 try {
-    $configJson = Get-Content $configPath -Raw
+    $configJson = Get-Content -Path $configPath -Raw -Encoding utf8
     $config = $configJson | ConvertFrom-Json
 } catch {
     Write-Host "====================================================" -ForegroundColor Red

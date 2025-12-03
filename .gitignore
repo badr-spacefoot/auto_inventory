@@ -1,2 +1,2 @@
 # Do NOT commit secret Webhook config
-windows/config_inventory.json
+windows/config_inventory_secret.json

@@ -1,10 +1,10 @@
-chcp 65001 > $null
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$OutputEncoding = [System.Text.Encoding]::UTF8
-
 # =====================================================================
 #  Spacefoot Auto Inventory - LAUNCHER (auto-update)
 # =====================================================================
+
+chcp 65001 > $null
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 
 $LAUNCHER_VERSION = "launcher v2.1.0"
 
@@ -19,7 +19,6 @@ $BaseDir   = Get-BaseDirectory
 $Config    = Join-Path $BaseDir "config_inventory.json"
 $CoreLocal = Join-Path $BaseDir "inventaire_windows_core.ps1"
 
-# URL RAW du core sur GitHub
 $coreUrl = "https://raw.githubusercontent.com/badr-spacefoot/auto_inventory/main/windows/inventaire_windows_core.ps1"
 
 Clear-Host
@@ -31,7 +30,6 @@ Write-Host "  Version : $LAUNCHER_VERSION"
 Write-Host "==============================================" -ForegroundColor Cyan
 Write-Host ""
 
-# 1) Vérification de la config locale
 if (!(Test-Path $Config)) {
     Write-Host "[ERREUR] Fichier config_inventory.json introuvable." -ForegroundColor Red
     Write-Host "Placez-le dans : $BaseDir" -ForegroundColor Yellow
@@ -40,7 +38,6 @@ if (!(Test-Path $Config)) {
     exit
 }
 
-# 2) Téléchargement de la dernière version du core
 Write-Host "Téléchargement de la dernière version du core..." -ForegroundColor White
 Write-Host "URL : $coreUrl" -ForegroundColor DarkGray
 

@@ -1,6 +1,6 @@
 # =====================================================================
 #   INVENTAIRE WINDOWS - Script principal (core)
-#   Version : v1.4.1 - 2025-12-03
+#   Version : v1.4.2 - 2025-12-03
 #   Auteur  : Spacefoot / Badr
 # =====================================================================
 
@@ -11,10 +11,10 @@
 # ---------------------------------------------------------------------
 if ($env:SPACEFOOT_INVENTAIRE -ne "1") {
     Write-Host "====================================================" -ForegroundColor Red
-    Write-Host "  EXECUTION NON AUTORISEE" -ForegroundColor Red
+    Write-Host "  EXECUTION NON AUTORISEE / UNAUTHORIZED EXECUTION" -ForegroundColor Red
     Write-Host "====================================================" -ForegroundColor Red
     Write-Host "Ce script doit etre lance via le launcher officiel." -ForegroundColor White
-    Write-Host "Veuillez utiliser le fichier .bat fourni par l'equipe IT." -ForegroundColor White
+    Write-Host "This script must be started via the official launcher." -ForegroundColor White
     Start-Sleep -Seconds 8
     exit 1
 }
@@ -52,7 +52,7 @@ Clear-Host
 # ---------------------------------------------------------------------
 #  Version + ASCII banner
 # ---------------------------------------------------------------------
-$VERSION = "v1.4.1"
+$VERSION = "v1.4.2"
 
 $AsciiBanner = @(
 "                                                                                     ",
@@ -118,9 +118,14 @@ function Show-AppHeader {
     $padRight = [Math]::Max(0, $width - $versionText.Length)
     Write-Host ""
     Write-Host ((" " * $padRight) + $versionText) -ForegroundColor DarkGray
+
+    # 3) Slogan FR / EN (just under banner)
+    Write-Host ""
+    Center-Write "Cartographier nos équipements comme jamais auparavant." ([ConsoleColor]::Green)
+    Center-Write "To boldly map where no SKU has gone before." ([ConsoleColor]::Green)
     Write-Host ""
 
-    # 3) Step Title + Subtitle (centered)
+    # 4) Step Title + Subtitle (FR / EN)
     if ($StepTitle) {
         Center-Write $StepTitle ([ConsoleColor]::White)
     }
@@ -130,11 +135,6 @@ function Show-AppHeader {
     if ($StepTitle -or $Subtitle) {
         Write-Host ""
     }
-
-    # 4) Tagline metasploit style (centered)
-    $tagline = "To boldly map where no SKU has gone before."
-    Center-Write $tagline ([ConsoleColor]::Green)
-    Write-Host ""
 }
 
 function Show-BoxCentered {
@@ -235,7 +235,7 @@ function Show-MenuCentered {
         Write-Host (" " * $leftMargin + $bottomLine) -ForegroundColor DarkRed
 
         Write-Host ""
-        $hint = "Utilisez les fleches HAUT/BAS puis ENTREE pour valider"
+        $hint = "HAUT/BAS + ENTREE pour valider / Use UP/DOWN + ENTER to confirm"
         $hintPad = [Math]::Floor(($screenWidth - $hint.Length) / 2)
         Write-Host ((" " * $hintPad) + $hint)
 
@@ -260,10 +260,12 @@ if ([string]::IsNullOrWhiteSpace($baseDir)) {
 $configPath = Join-Path $baseDir "config_inventory.json"
 
 if (!(Test-Path $configPath)) {
-    Show-AppHeader "ERREUR CONFIG" ""
-    Show-BoxCentered -Title "ERREUR CONFIG" -Lines @(
+    Show-AppHeader "ERREUR CONFIG / CONFIG ERROR" ""
+    Show-BoxCentered -Title "ERREUR CONFIG / CONFIG ERROR" -Lines @(
         "Fichier 'config_inventory.json' introuvable.",
-        "Ajoutez-le dans le meme dossier que le launcher."
+        "File 'config_inventory.json' not found.",
+        "Placez-le dans le même dossier que le launcher.",
+        "Put it in the same folder as the launcher."
     )
     Start-Sleep -Seconds 10
     exit 1
@@ -273,9 +275,10 @@ try {
     $configJson = Get-Content -Path $configPath -Raw -Encoding utf8
     $config = $configJson | ConvertFrom-Json
 } catch {
-    Show-AppHeader "ERREUR LECTURE CONFIG" ""
-    Show-BoxCentered -Title "ERREUR LECTURE CONFIG" -Lines @(
+    Show-AppHeader "ERREUR LECTURE CONFIG / CONFIG READ ERROR" ""
+    Show-BoxCentered -Title "ERREUR LECTURE CONFIG / CONFIG READ ERROR" -Lines @(
         "Impossible de lire ou parser 'config_inventory.json'.",
+        "Unable to read or parse 'config_inventory.json'.",
         $_.Exception.Message
     )
     Start-Sleep -Seconds 10
@@ -284,29 +287,30 @@ try {
 
 $webhookUrl = $config.webhook
 if ([string]::IsNullOrWhiteSpace($webhookUrl)) {
-    Show-AppHeader "ERREUR CONFIG" ""
-    Show-BoxCentered -Title "ERREUR CONFIG" -Lines @(
-        "La cle 'webhook' est absente ou vide dans config_inventory.json."
+    Show-AppHeader "ERREUR CONFIG / CONFIG ERROR" ""
+    Show-BoxCentered -Title "ERREUR CONFIG / CONFIG ERROR" -Lines @(
+        "La clé 'webhook' est absente ou vide.",
+        "Key 'webhook' is missing or empty."
     )
     Start-Sleep -Seconds 10
     exit 1
 }
 
 if (-not $config.teams -or $config.teams.Count -eq 0) {
-    Show-AppHeader "ERREUR CONFIG" ""
-    Show-BoxCentered -Title "ERREUR CONFIG" -Lines @(
-        "Aucune 'team' definie dans config_inventory.json.",
-        "Ajoutez un tableau 'teams' dans le fichier."
+    Show-AppHeader "ERREUR CONFIG / CONFIG ERROR" ""
+    Show-BoxCentered -Title "ERREUR CONFIG / CONFIG ERROR" -Lines @(
+        "Aucune 'team' définie dans le fichier.",
+        "No 'teams' defined in the file."
     )
     Start-Sleep -Seconds 10
     exit 1
 }
 
 if (-not $config.sites -or $config.sites.Count -eq 0) {
-    Show-AppHeader "ERREUR CONFIG" ""
-    Show-BoxCentered -Title "ERREUR CONFIG" -Lines @(
-        "Aucun 'site' defini dans config_inventory.json.",
-        "Ajoutez un tableau 'sites' dans le fichier."
+    Show-AppHeader "ERREUR CONFIG / CONFIG ERROR" ""
+    Show-BoxCentered -Title "ERREUR CONFIG / CONFIG ERROR" -Lines @(
+        "Aucun 'site' défini dans le fichier.",
+        "No 'sites' defined in the file."
     )
     Start-Sleep -Seconds 10
     exit 1
@@ -318,34 +322,33 @@ $sites = @($config.sites)
 # =====================================================================
 #   ETAPE 1/4 - INTRO
 # =====================================================================
-Show-AppHeader "ÉTAPE 1/4 — INTRODUCTION" "Présentation de l'inventaire Spacefoot"
+Show-AppHeader "ÉTAPE 1/4 — INTRODUCTION / INTRO" "Inventaire des postes Spacefoot / Spacefoot device inventory"
 
 $introLines = @"
 [FR] Ce programme collecte automatiquement les informations TECHNIQUES
-     de votre ordinateur (modele, numero de serie, OS, CPU, RAM,
-     IP interne, MAC...). Aucune donnee personnelle n'est collecte.
+     de votre ordinateur (modèle, numéro de série, OS, CPU, RAM,
+     IP interne, MAC...). Aucune donnée personnelle n'est collectée.
 
-[EN] This program automatically collects TECHNICAL information about
-     your device (model, serial number, OS, CPU, RAM, internal IP, MAC...).
-     No personal data is collected.
+[EN] This program automatically collects TECHNICAL information
+     about your computer (model, serial number, OS, CPU, RAM,
+     internal IP, MAC...). No personal data is collected.
 
-En continuant, vous acceptez de participer a cet inventaire.
 "@ -split "`n"
 
 foreach ($l in $introLines) {
     Center-Write $l ([ConsoleColor]::White)
 }
 Write-Host ""
-Center-Write "Appuyez sur ENTREE pour continuer..." ([ConsoleColor]::Gray)
+Center-Write "Appuyez sur ENTREE pour continuer / Press ENTER to continue" ([ConsoleColor]::Gray)
 [Console]::ReadKey($true) | Out-Null
 
 # =====================================================================
 #   ETAPE 1/4 - IDENTITE UTILISATEUR
 # =====================================================================
-Show-AppHeader "ÉTAPE 1/4 — IDENTITÉ UTILISATEUR" "Merci de renseigner vos informations"
+Show-AppHeader "ÉTAPE 1/4 — IDENTITÉ UTILISATEUR / USER IDENTITY" "Renseignez vos informations / Please enter your information"
 
 Write-Host ""
-$firstName = Read-Host "  Entrez votre prenom / Enter your first name"
+$firstName = Read-Host "  Entrez votre prénom / Enter your first name"
 $lastName  = Read-Host "  Entrez votre nom / Enter your last name"
 Write-Host ""
 
@@ -367,7 +370,7 @@ for ($i = 0; $i -lt $teams.Count; $i++) {
 
 $teamResult = Show-MenuCentered `
     -StepTitle "ÉTAPE 2/4 — TEAM / SERVICE" `
-    -Subtitle  "Choisissez votre équipe au sein de Spacefoot" `
+    -Subtitle  "Sélectionnez votre équipe / Select your team" `
     -Options   $teamOptions
 
 $teamIndex = $teamResult[0]
@@ -382,8 +385,8 @@ for ($i = 0; $i -lt $sites.Count; $i++) {
 }
 
 $siteResult = Show-MenuCentered `
-    -StepTitle "ÉTAPE 3/4 — LIEU / ÉTABLISSEMENT" `
-    -Subtitle  "Sélectionnez le site où vous travaillez" `
+    -StepTitle "ÉTAPE 3/4 — LIEU / SITE" `
+    -Subtitle  "Sélectionnez votre établissement / Select your site" `
     -Options   $siteOptions
 
 $siteIndex = $siteResult[0]
@@ -392,8 +395,8 @@ $siteLabel = $sites[$siteIndex]
 # =====================================================================
 #   ETAPE 3/4 - COLLECTE TECHNIQUE
 # =====================================================================
-Show-AppHeader "ÉTAPE 3/4 — COLLECTE TECHNIQUE" "Récupération automatique des informations machine"
-Center-Write "Veuillez patienter, collecte en cours..." ([ConsoleColor]::Gray)
+Show-AppHeader "ÉTAPE 3/4 — COLLECTE TECHNIQUE / TECHNICAL SCAN" "Récupération automatique des infos / Automatically collecting system info"
+Center-Write "Veuillez patienter... / Please wait..." ([ConsoleColor]::Gray)
 Write-Host ""
 
 $PCName = $env:COMPUTERNAME
@@ -437,41 +440,41 @@ $body = @{
 # =====================================================================
 #   ETAPE 4/4 - RECAP (ECRAN 1)
 # =====================================================================
-Show-AppHeader "ÉTAPE 4/4 — RÉCAPITULATIF" "Vérifiez les informations avant envoi"
+Show-AppHeader "ÉTAPE 4/4 — RÉCAPITULATIF / SUMMARY" "Vérifiez les informations / Check the information"
 
 $recapLines = @(
-    "Prenom        : $firstName",
-    "Nom           : $lastName",
-    "Team          : $teamLabel",
-    "Etablissement : $siteLabel",
+    "Prénom / First name : $firstName",
+    "Nom / Last name    : $lastName",
+    "Team / Team        : $teamLabel",
+    "Établissement / Site: $siteLabel",
     "",
-    "OS Type       : Windows",
-    "Nom du PC     : $PCName",
-    "Utilisateur   : $User",
-    "Fabricant     : $($Sys.Manufacturer)",
-    "Modele        : $($Sys.Model)",
-    "No. de serie  : $($BIOS.SerialNumber)",
-    "Systeme       : $($OS.Caption) $($OS.Version)",
-    "CPU           : $($CPU.Name)",
-    "RAM           : ${RAM} GB",
-    "IP interne    : $IP",
-    "Adresse MAC   : $MAC"
+    "Type OS / OS type  : Windows",
+    "Nom du PC / Host   : $PCName",
+    "Utilisateur / User : $User",
+    "Fabricant / Vendor : $($Sys.Manufacturer)",
+    "Modèle / Model     : $($Sys.Model)",
+    "N° série / Serial  : $($BIOS.SerialNumber)",
+    "Système / System   : $($OS.Caption) $($OS.Version)",
+    "CPU                : $($CPU.Name)",
+    "RAM                : ${RAM} GB",
+    "IP interne / IP    : $IP",
+    "MAC                : $MAC"
 )
 
-Show-BoxCentered -Title "RECAPITULATIF" -Lines $recapLines
+Show-BoxCentered -Title "RÉCAPITULATIF / SUMMARY" -Lines $recapLines
 Write-Host ""
-Center-Write "Vérifiez bien les informations ci-dessus." ([ConsoleColor]::White)
-Center-Write "Appuyez sur ENTREE pour passer à la confirmation..." ([ConsoleColor]::Gray)
+Center-Write "Si tout est correct, continuez. / If everything is correct, continue." ([ConsoleColor]::White)
+Center-Write "Appuyez sur ENTREE pour passer à la confirmation / Press ENTER to go to confirmation" ([ConsoleColor]::Gray)
 [Console]::ReadKey($true) | Out-Null
 
 # =====================================================================
 #   ETAPE 4/4 - CONFIRMATION (ECRAN 2)
 # =====================================================================
-$confirmOptions = @("[ VALIDER ]", "[ ANNULER ]")
+$confirmOptions = @("[ VALIDER / CONFIRM ]", "[ ANNULER / CANCEL ]")
 
 $confResult  = Show-MenuCentered `
     -StepTitle "ÉTAPE 4/4 — CONFIRMATION" `
-    -Subtitle  "Validez ou annulez l’envoi de votre inventaire" `
+    -Subtitle  "Validez ou annulez l'envoi / Confirm or cancel submission" `
     -Options   $confirmOptions
 
 $finalChoice = $confResult[1]
@@ -479,23 +482,23 @@ $finalChoice = $confResult[1]
 # =====================================================================
 #   ENVOI
 # =====================================================================
-Show-AppHeader "ENVOI DES DONNÉES" "Transmission vers l'inventaire central"
+Show-AppHeader "ENVOI DES DONNÉES / SENDING DATA" "Transmission vers Google Sheet / Sending to Google Sheet"
 
-if ($finalChoice -eq "[ VALIDER ]") {
+if ($finalChoice -like "[ VALIDER*") {
     try {
         $response = Invoke-RestMethod -Uri $webhookUrl -Method Post -Body $body -ContentType "application/json"
-        Center-Write "[OK] Inventaire envoye avec succes. Merci !" ([ConsoleColor]::Green)
+        Center-Write "Inventaire envoyé avec succès. Merci ! / Inventory sent successfully. Thank you!" ([ConsoleColor]::Green)
         if ($response) {
-            Center-Write "Statut retour : $response" ([ConsoleColor]::DarkGray)
+            Center-Write "Réponse / Response: $response" ([ConsoleColor]::DarkGray)
         }
     } catch {
-        Center-Write "[ERREUR] Impossible d'envoyer l'inventaire." ([ConsoleColor]::Red)
+        Center-Write "ERREUR : envoi impossible. / ERROR: unable to send." ([ConsoleColor]::Red)
         Center-Write $_.Exception.Message ([ConsoleColor]::DarkGray)
     }
 } else {
-    Center-Write "Envoi annule par l'utilisateur." ([ConsoleColor]::Red)
+    Center-Write "Envoi annulé par l'utilisateur. / Submission cancelled by user." ([ConsoleColor]::Red)
 }
 
 Write-Host ""
-Center-Write "Cette fenetre se fermera dans 10 secondes..." ([ConsoleColor]::White)
+Center-Write "Cette fenêtre se fermera dans 10 secondes... / This window will close in 10 seconds..." ([ConsoleColor]::White)
 Start-Sleep -Seconds 10

@@ -10,21 +10,20 @@
 # ---------------------------------------------------------------------
 function Get-BaseDirectory {
     if ($PSScriptRoot -and (Test-Path $PSScriptRoot)) {
+        # Cas où le script est lancé directement : on utilise le dossier du .ps1
         return $PSScriptRoot
     }
-    try {
-        $exePath = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
-        $dir     = [System.IO.Path]::GetDirectoryName($exePath)
-        if (Test-Path $dir) { return $dir }
-    } catch { }
+
+    # Cas où il est lancé via le launcher (ScriptBlock) : on se base sur le dossier courant
     return (Get-Location).Path
 }
 
-$Global:INV_BaseDir = Get-BaseDirectory
-$Global:INV_LogFile = Join-Path $INV_BaseDir "inventory_error.log"
+$Global:INV_BaseDir   = Get-BaseDirectory
+$Global:INV_ConfigPath = Join-Path $INV_BaseDir "config_inventory.json"
+$Global:INV_LogFile   = Join-Path $INV_BaseDir "inventory_error.log"
 
 trap {
-    $msg = "`n===== FATAL ERROR =====`n"
+    $msg  = "`n===== FATAL ERROR =====`n"
     $msg += (Get-Date).ToString("yyyy-MM-dd HH:mm:ss") + "`n"
     $msg += ($_ | Out-String) + "`n"
     Add-Content -Path $INV_LogFile -Value $msg

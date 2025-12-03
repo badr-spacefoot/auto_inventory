@@ -1,6 +1,6 @@
 # =====================================================================
 #   INVENTAIRE WINDOWS - Script principal (core)
-#   Version : v1.3.1 - 2025-12-03
+#   Version : v1.4.1 - 2025-12-03
 #   Auteur  : Spacefoot / Badr
 # =====================================================================
 
@@ -20,14 +20,13 @@ if ($env:SPACEFOOT_INVENTAIRE -ne "1") {
 }
 
 # ---------------------------------------------------------------------
-#  UI : couleurs + plein écran
+#  UI : couleurs + tentative plein écran
 # ---------------------------------------------------------------------
 $rawUI = $Host.UI.RawUI
 $rawUI.BackgroundColor = 'Black'
 $rawUI.ForegroundColor = 'White'
 Clear-Host
 
-# Maximise la fenêtre PowerShell (Win32 API)
 try {
     Add-Type @'
 using System;
@@ -51,9 +50,35 @@ Start-Sleep -Milliseconds 200
 Clear-Host
 
 # ---------------------------------------------------------------------
+#  Version + ASCII banner
+# ---------------------------------------------------------------------
+$VERSION = "v1.4.1"
+
+$AsciiBanner = @(
+"                                                                                     ",
+"                                                                                     ",
+"                                                                                     ",
+"       :##:                                             ######   ###   ##  ##:  :## ",
+"        ##                 ##                           ######   ###   ##  ##    ## ",
+"       ####                ##                             ##     ###:  ##  :##  ##: ",
+"       ####    ##    ##  #######    .####.                ##     ####  ##  :##  ##: ",
+"      :#  #:   ##    ##  #######   .######.               ##     ##:#: ##   ## .##  ",
+"       #::#    ##    ##    ##      ###  ###               ##     ## ## ##   ##::##  ",
+"      ##  ##   ##    ##    ##      ##.  .##               ##     ## ## ##   ##::##  ",
+"      ######   ##    ##    ##      ##    ##               ##     ## :#:##   :####:  ",
+"     .######.  ##    ##    ##      ##.  .##               ##     ##  ####   .####.  ",
+"     :##  ##:  ##:  ###    ##.     ###  ###     ##        ##     ##  :###    ####   ",
+"     ###  ###   #######    #####   .######.     ##      ######   ##   ###    ####   ",
+"     ##:  :##    ###.##    .####    .####.      ##      ######   ##   ###     ##    ",
+"                                                                                     ",
+"                                                                                     ",
+"                                                                                     ",
+"                                                                                     "
+)
+
+# ---------------------------------------------------------------------
 #  Fonctions utilitaires UI
 # ---------------------------------------------------------------------
-
 function Get-WindowWidth {
     return $Host.UI.RawUI.WindowSize.Width
 }
@@ -73,14 +98,43 @@ function Center-Write {
     }
 }
 
-function Draw-TitleBar {
+function Show-AppHeader {
     param(
-        [string]$Title
+        [string]$StepTitle,
+        [string]$Subtitle
     )
+
+    Clear-Host
+
     $width = Get-WindowWidth
-    Write-Host ("=" * $width) -ForegroundColor DarkRed
-    Center-Write $Title ([ConsoleColor]::White)
-    Write-Host ("=" * $width) -ForegroundColor DarkRed
+
+    # 1) ASCII banner (centered)
+    foreach ($line in $AsciiBanner) {
+        Center-Write $line ([ConsoleColor]::Cyan)
+    }
+
+    # 2) Version bottom-right
+    $versionText = "Version $VERSION"
+    $padRight = [Math]::Max(0, $width - $versionText.Length)
+    Write-Host ""
+    Write-Host ((" " * $padRight) + $versionText) -ForegroundColor DarkGray
+    Write-Host ""
+
+    # 3) Step Title + Subtitle (centered)
+    if ($StepTitle) {
+        Center-Write $StepTitle ([ConsoleColor]::White)
+    }
+    if ($Subtitle) {
+        Center-Write $Subtitle ([ConsoleColor]::Gray)
+    }
+    if ($StepTitle -or $Subtitle) {
+        Write-Host ""
+    }
+
+    # 4) Tagline metasploit style (centered)
+    $tagline = "To boldly map where no SKU has gone before."
+    Center-Write $tagline ([ConsoleColor]::Green)
+    Write-Host ""
 }
 
 function Show-BoxCentered {
@@ -88,44 +142,43 @@ function Show-BoxCentered {
         [string]$Title,
         [string[]]$Lines
     )
+
     $width = Get-WindowWidth
     $maxLen = $Title.Length
     foreach ($l in $Lines) {
         if ($l.Length -gt $maxLen) { $maxLen = $l.Length }
     }
-    $boxWidth = [Math]::Min($maxLen + 4, $width - 4)
+    $innerWidth = [Math]::Min($maxLen + 4, $width - 10)
+    $boxWidth   = $innerWidth + 2
+    $leftMargin = [Math]::Floor(($width - $boxWidth) / 2)
 
-    $top    = "╔" + ("═" * ($boxWidth - 2)) + "╗"
-    $bottom = "╚" + ("═" * ($boxWidth - 2)) + "╝"
+    $top    = "╔" + ("═" * $innerWidth) + "╗"
+    $bottom = "╚" + ("═" * $innerWidth) + "╝"
 
-    Center-Write $top ([ConsoleColor]::DarkRed)
+    Write-Host (" " * $leftMargin + $top) -ForegroundColor DarkRed
 
-    # Titre
-    $titleLine = " " + $Title + " "
-    if ($titleLine.Length -gt ($boxWidth - 2)) {
-        $titleLine = $titleLine.Substring(0, $boxWidth - 2)
-    }
-    $titlePadded = $titleLine.PadRight($boxWidth - 2)
-    Center-Write ("║" + $titlePadded + "║") ([ConsoleColor]::White)
+    # titre
+    $titlePadded = " " + $Title
+    if ($titlePadded.Length -gt $innerWidth) { $titlePadded = $titlePadded.Substring(0, $innerWidth) }
+    $titlePadded = $titlePadded.PadRight($innerWidth)
+    Write-Host (" " * $leftMargin + "║" + $titlePadded + "║") -ForegroundColor White
 
-    # Ligne vide
-    Center-Write ("║" + (" " * ($boxWidth - 2)) + "║") ([ConsoleColor]::White)
+    # ligne vide
+    Write-Host (" " * $leftMargin + "║" + (" " * $innerWidth) + "║")
 
     foreach ($line in $Lines) {
         $text = " " + $line
-        if ($text.Length -gt ($boxWidth - 2)) {
-            $text = $text.Substring(0, $boxWidth - 2)
-        }
-        $textPadded = $text.PadRight($boxWidth - 2)
-        Center-Write ("║" + $textPadded + "║") ([ConsoleColor]::White)
+        if ($text.Length -gt $innerWidth) { $text = $text.Substring(0, $innerWidth) }
+        $text = $text.PadRight($innerWidth)
+        Write-Host (" " * $leftMargin + "║" + $text + "║") -ForegroundColor White
     }
 
-    Center-Write $bottom ([ConsoleColor]::DarkRed)
+    Write-Host (" " * $leftMargin + $bottom) -ForegroundColor DarkRed
 }
 
 function Show-MenuCentered {
     param(
-        [string]$Title,
+        [string]$StepTitle,
         [string]$Subtitle,
         [string[]]$Options
     )
@@ -133,27 +186,20 @@ function Show-MenuCentered {
     $index = 0
 
     while ($true) {
-        Clear-Host
+        Show-AppHeader $StepTitle $Subtitle
 
         $screenWidth  = $Host.UI.RawUI.WindowSize.Width
-        $screenHeight = $Host.UI.RawUI.WindowSize.Height
 
-        # Determine box width based on longest text
-        $maxLen = $Title.Length
-        if ($Subtitle) { if ($Subtitle.Length -gt $maxLen) { $maxLen = $Subtitle.Length } }
+        # Longueur max des options
+        $maxLen = 0
         foreach ($o in $Options) {
             if ($o.Length -gt $maxLen) { $maxLen = $o.Length }
         }
 
-        $innerWidth = [Math]::Min($maxLen + 4, $screenWidth - 10)   # inside box
+        $innerWidth = [Math]::Min($maxLen + 6, $screenWidth - 10)   # inside box
         $boxWidth   = $innerWidth + 2                               # borders
         $leftMargin = [Math]::Floor(($screenWidth - $boxWidth) / 2)
 
-        # Approx total lines of the box (top + title + subtitle + blank + options + bottom)
-        $totalLines = 5 + $Options.Count
-        $topPadding = [Math]::Max(0, [Math]::Floor(($screenHeight - $totalLines) / 2))
-
-        # Helper to center a text inside the box inner width
         function _pad-inner([string]$text, [int]$w) {
             if ($null -eq $text) { $text = "" }
             if ($text.Length -gt $w) { $text = $text.Substring(0, $w) }
@@ -162,33 +208,20 @@ function Show-MenuCentered {
             return (" " * $padLeft) + $text + (" " * $padRight)
         }
 
-        # Vertical padding to center
-        for ($i = 0; $i -lt $topPadding; $i++) { Write-Host "" }
+        Write-Host ""
+        Write-Host ""
 
         $topLine    = "╔" + ("═" * $innerWidth) + "╗"
         $bottomLine = "╚" + ("═" * $innerWidth) + "╝"
 
         Write-Host (" " * $leftMargin + $topLine) -ForegroundColor DarkRed
-
-        # Title line
-        $titleInner = _pad-inner $Title $innerWidth
-        Write-Host (" " * $leftMargin + "║" + $titleInner + "║")
-
-        # Subtitle (optional)
-        if ($Subtitle) {
-            $subInner = _pad-inner $Subtitle $innerWidth
-            Write-Host (" " * $leftMargin + "║" + $subInner + "║")
-        }
-
-        # Blank line
+        # ligne vide avant options
         Write-Host (" " * $leftMargin + "║" + (" " * $innerWidth) + "║")
 
-        # Options
         for ($i = 0; $i -lt $Options.Length; $i++) {
             $opt = _pad-inner $Options[$i] $innerWidth
 
             if ($i -eq $index) {
-                # Selected option: highlight only inside the box
                 Write-Host (" " * $leftMargin + "║") -NoNewline
                 Write-Host $opt -ForegroundColor Black -BackgroundColor DarkRed -NoNewline
                 Write-Host "║"
@@ -197,15 +230,15 @@ function Show-MenuCentered {
             }
         }
 
+        # ligne vide après options
+        Write-Host (" " * $leftMargin + "║" + (" " * $innerWidth) + "║")
         Write-Host (" " * $leftMargin + $bottomLine) -ForegroundColor DarkRed
 
-        # Little hint below
         Write-Host ""
         $hint = "Utilisez les fleches HAUT/BAS puis ENTREE pour valider"
         $hintPad = [Math]::Floor(($screenWidth - $hint.Length) / 2)
         Write-Host ((" " * $hintPad) + $hint)
 
-        # Keyboard handling
         $key = [Console]::ReadKey($true)
         switch ($key.Key) {
             "UpArrow"   { if ($index -gt 0) { $index-- } else { $index = $Options.Length - 1 } }
@@ -214,14 +247,6 @@ function Show-MenuCentered {
         }
     }
 }
-
-# ---------------------------------------------------------------------
-#  Affichage version
-# ---------------------------------------------------------------------
-$VERSION = "v1.3.1 - 2025-12-03"
-Draw-TitleBar "INVENTAIRE INFORMATIQUE - SPACEFOOT (CORE $VERSION)"
-Center-Write ""
-Start-Sleep -Milliseconds 700
 
 # =====================================================================
 #   CHARGEMENT CONFIG (webhook + listes teams/sites)
@@ -235,6 +260,7 @@ if ([string]::IsNullOrWhiteSpace($baseDir)) {
 $configPath = Join-Path $baseDir "config_inventory.json"
 
 if (!(Test-Path $configPath)) {
+    Show-AppHeader "ERREUR CONFIG" ""
     Show-BoxCentered -Title "ERREUR CONFIG" -Lines @(
         "Fichier 'config_inventory.json' introuvable.",
         "Ajoutez-le dans le meme dossier que le launcher."
@@ -247,6 +273,7 @@ try {
     $configJson = Get-Content -Path $configPath -Raw -Encoding utf8
     $config = $configJson | ConvertFrom-Json
 } catch {
+    Show-AppHeader "ERREUR LECTURE CONFIG" ""
     Show-BoxCentered -Title "ERREUR LECTURE CONFIG" -Lines @(
         "Impossible de lire ou parser 'config_inventory.json'.",
         $_.Exception.Message
@@ -257,6 +284,7 @@ try {
 
 $webhookUrl = $config.webhook
 if ([string]::IsNullOrWhiteSpace($webhookUrl)) {
+    Show-AppHeader "ERREUR CONFIG" ""
     Show-BoxCentered -Title "ERREUR CONFIG" -Lines @(
         "La cle 'webhook' est absente ou vide dans config_inventory.json."
     )
@@ -265,6 +293,7 @@ if ([string]::IsNullOrWhiteSpace($webhookUrl)) {
 }
 
 if (-not $config.teams -or $config.teams.Count -eq 0) {
+    Show-AppHeader "ERREUR CONFIG" ""
     Show-BoxCentered -Title "ERREUR CONFIG" -Lines @(
         "Aucune 'team' definie dans config_inventory.json.",
         "Ajoutez un tableau 'teams' dans le fichier."
@@ -274,6 +303,7 @@ if (-not $config.teams -or $config.teams.Count -eq 0) {
 }
 
 if (-not $config.sites -or $config.sites.Count -eq 0) {
+    Show-AppHeader "ERREUR CONFIG" ""
     Show-BoxCentered -Title "ERREUR CONFIG" -Lines @(
         "Aucun 'site' defini dans config_inventory.json.",
         "Ajoutez un tableau 'sites' dans le fichier."
@@ -286,10 +316,9 @@ $teams = @($config.teams)
 $sites = @($config.sites)
 
 # =====================================================================
-#   MESSAGE D’INTRO
+#   ETAPE 1/4 - INTRO
 # =====================================================================
-Clear-Host
-Draw-TitleBar "INVENTAIRE DES POSTES INFORMATIQUES"
+Show-AppHeader "ÉTAPE 1/4 — INTRODUCTION" "Présentation de l'inventaire Spacefoot"
 
 $introLines = @"
 [FR] Ce programme collecte automatiquement les informations TECHNIQUES
@@ -311,16 +340,9 @@ Center-Write "Appuyez sur ENTREE pour continuer..." ([ConsoleColor]::Gray)
 [Console]::ReadKey($true) | Out-Null
 
 # =====================================================================
-#   IDENTITE UTILISATEUR
+#   ETAPE 1/4 - IDENTITE UTILISATEUR
 # =====================================================================
-Clear-Host
-Draw-TitleBar "IDENTITE UTILISATEUR"
-
-Center-Write ""
-Center-Write "Merci de renseigner vos informations d'identite :" ([ConsoleColor]::White)
-Center-Write ""
-
-$width = Get-WindowWidth
+Show-AppHeader "ÉTAPE 1/4 — IDENTITÉ UTILISATEUR" "Merci de renseigner vos informations"
 
 Write-Host ""
 $firstName = Read-Host "  Entrez votre prenom / Enter your first name"
@@ -336,35 +358,41 @@ if (-not [string]::IsNullOrWhiteSpace($lastName)) {
 }
 
 # =====================================================================
-#   TEAM (menu basé sur $teams)
+#   ETAPE 2/4 - TEAM
 # =====================================================================
 $teamOptions = @()
 for ($i = 0; $i -lt $teams.Count; $i++) {
-    $teamOptions += ("{0} - {1}" -f ($i + 1), $teams[$i])
+    $teamOptions += ("[{0}] {1}" -f ($i + 1), $teams[$i])
 }
 
-$teamResult = Show-MenuCentered -Title "SELECTION TEAM" -Subtitle "Selectionnez votre Team / Select your team" -Options $teamOptions
-$teamIndex  = $teamResult[0]
-$teamLabel  = $teams[$teamIndex]
+$teamResult = Show-MenuCentered `
+    -StepTitle "ÉTAPE 2/4 — TEAM / SERVICE" `
+    -Subtitle  "Choisissez votre équipe au sein de Spacefoot" `
+    -Options   $teamOptions
+
+$teamIndex = $teamResult[0]
+$teamLabel = $teams[$teamIndex]
 
 # =====================================================================
-#   ETABLISSEMENT (menu basé sur $sites)
+#   ETAPE 3/4 - ETABLISSEMENT
 # =====================================================================
 $siteOptions = @()
 for ($i = 0; $i -lt $sites.Count; $i++) {
-    $siteOptions += ("{0} - {1}" -f ($i + 1), $sites[$i])
+    $siteOptions += ("[{0}] {1}" -f ($i + 1), $sites[$i])
 }
 
-$siteResult = Show-MenuCentered -Title "SELECTION ETABLISSEMENT" -Subtitle "Selectionnez votre etablissement / Select your site" -Options $siteOptions
-$siteIndex  = $siteResult[0]
-$siteLabel  = $sites[$siteIndex]
+$siteResult = Show-MenuCentered `
+    -StepTitle "ÉTAPE 3/4 — LIEU / ÉTABLISSEMENT" `
+    -Subtitle  "Sélectionnez le site où vous travaillez" `
+    -Options   $siteOptions
+
+$siteIndex = $siteResult[0]
+$siteLabel = $sites[$siteIndex]
 
 # =====================================================================
-#   COLLECTE INFOS MACHINE
+#   ETAPE 3/4 - COLLECTE TECHNIQUE
 # =====================================================================
-Clear-Host
-Draw-TitleBar "COLLECTE DES INFORMATIONS TECHNIQUES"
-
+Show-AppHeader "ÉTAPE 3/4 — COLLECTE TECHNIQUE" "Récupération automatique des informations machine"
 Center-Write "Veuillez patienter, collecte en cours..." ([ConsoleColor]::Gray)
 Write-Host ""
 
@@ -386,7 +414,7 @@ $MAC = (Get-NetAdapter |
         Select-Object -First 1 -ExpandProperty MacAddress)
 
 # =====================================================================
-#   JSON A ENVOYER
+#   PREPARATION JSON
 # =====================================================================
 $body = @{
     firstName    = $firstName
@@ -407,10 +435,9 @@ $body = @{
 } | ConvertTo-Json -Depth 5
 
 # =====================================================================
-#   RECAP + CONFIRMATION
+#   ETAPE 4/4 - RECAP (ECRAN 1)
 # =====================================================================
-Clear-Host
-Draw-TitleBar "CONFIRMATION AVANT ENVOI"
+Show-AppHeader "ÉTAPE 4/4 — RÉCAPITULATIF" "Vérifiez les informations avant envoi"
 
 $recapLines = @(
     "Prenom        : $firstName",
@@ -433,25 +460,33 @@ $recapLines = @(
 
 Show-BoxCentered -Title "RECAPITULATIF" -Lines $recapLines
 Write-Host ""
-Center-Write "Confirmez-vous l'envoi de ces informations ?" ([ConsoleColor]::White)
-Center-Write ""
+Center-Write "Vérifiez bien les informations ci-dessus." ([ConsoleColor]::White)
+Center-Write "Appuyez sur ENTREE pour passer à la confirmation..." ([ConsoleColor]::Gray)
+[Console]::ReadKey($true) | Out-Null
 
+# =====================================================================
+#   ETAPE 4/4 - CONFIRMATION (ECRAN 2)
+# =====================================================================
 $confirmOptions = @("[ VALIDER ]", "[ ANNULER ]")
-$confResult  = Show-MenuCentered -Title "CONFIRMATION" -Subtitle "Choisissez une option" -Options $confirmOptions
+
+$confResult  = Show-MenuCentered `
+    -StepTitle "ÉTAPE 4/4 — CONFIRMATION" `
+    -Subtitle  "Validez ou annulez l’envoi de votre inventaire" `
+    -Options   $confirmOptions
+
 $finalChoice = $confResult[1]
 
 # =====================================================================
 #   ENVOI
 # =====================================================================
-Clear-Host
-Draw-TitleBar "ENVOI DES DONNEES"
+Show-AppHeader "ENVOI DES DONNÉES" "Transmission vers l'inventaire central"
 
 if ($finalChoice -eq "[ VALIDER ]") {
     try {
         $response = Invoke-RestMethod -Uri $webhookUrl -Method Post -Body $body -ContentType "application/json"
         Center-Write "[OK] Inventaire envoye avec succes. Merci !" ([ConsoleColor]::Green)
         if ($response) {
-            Center-Write "Statut retour : $response" ([ConsoleColor]::Gray)
+            Center-Write "Statut retour : $response" ([ConsoleColor]::DarkGray)
         }
     } catch {
         Center-Write "[ERREUR] Impossible d'envoyer l'inventaire." ([ConsoleColor]::Red)

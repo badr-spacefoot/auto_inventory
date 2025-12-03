@@ -486,7 +486,12 @@ Show-AppHeader "ENVOI DES DONNÉES / SENDING DATA" "Transmission vers Google She
 
 if ($finalChoice -match "VALIDER") {
     try {
-        $response = Invoke-RestMethod -Uri $webhookUrl -Method Post -Body $body -ContentType "application/json"
+        $response = Invoke-RestMethod `
+            -Uri $webhookUrl `
+            -Method Post `
+            -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) `
+            -ContentType "application/json; charset=utf-8"
+
         Center-Write "Inventaire envoyé avec succès. Merci ! / Inventory sent successfully. Thank you!" ([ConsoleColor]::Green)
         if ($response) {
             Center-Write "Réponse / Response: $response" ([ConsoleColor]::DarkGray)

@@ -121,8 +121,8 @@ function Show-AppHeader {
 
     # 3) Slogan FR / EN (just under banner)
     Write-Host ""
-    Center-Write "Cartographier nos équipements comme jamais auparavant." ([ConsoleColor]::Green)
-    Center-Write "To boldly map where no SKU has gone before." ([ConsoleColor]::Green)
+    Center-Write "Inventaire aujourd’hui, sécurité demain." ([ConsoleColor]::Green)
+    Center-Write "Inventory today, security tomorrow." ([ConsoleColor]::Green)
     Write-Host ""
 
     # 4) Step Title + Subtitle (FR / EN)

@@ -1,9 +1,11 @@
+chcp 65001 > $null
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+
 # =====================================================================
 #   INVENTAIRE WINDOWS - Script principal (core)
 #   Version : v1.5.0 - 2025-12-03
 # =====================================================================
-
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 function Get-BaseDirectory {
     if ($PSScriptRoot -and (Test-Path $PSScriptRoot)) {

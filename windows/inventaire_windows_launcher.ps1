@@ -6,7 +6,7 @@ chcp 65001 > $null
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
-$LAUNCHER_VERSION = "launcher v3.0.0"
+$LAUNCHER_VERSION = "launcher v3.0.1"
 
 function Get-BaseDirectory {
     if ($PSScriptRoot -and (Test-Path $PSScriptRoot)) {
@@ -15,11 +15,13 @@ function Get-BaseDirectory {
     return (Get-Location).Path
 }
 
-$BaseDir   = Get-BaseDirectory
+# --- On force le working directory sur le dossier du launcher ---
+$BaseDir = Get-BaseDirectory
+Set-Location -Path $BaseDir
+
 $Config    = Join-Path $BaseDir "config_inventory.json"
 $CoreLocal = Join-Path $BaseDir "inventaire_windows_core.ps1"
 
-# URL RAW du core sur GitHub (branche main)
 $coreUrl   = "https://raw.githubusercontent.com/badr-spacefoot/auto_inventory/main/windows/inventaire_windows_core.ps1"
 
 Clear-Host

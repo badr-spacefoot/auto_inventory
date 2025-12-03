@@ -42,7 +42,7 @@ if (!(Test-Path $Config)) {
     exit 1
 }
 
-# --- Telechargement du core depuis GitHub ---
+# --- Téléchargement du core depuis GitHub ---
 Write-Host "Telechargement de la derniere version du core..." -ForegroundColor White
 Write-Host "URL : $coreUrl" -ForegroundColor DarkGray
 Write-Host ""
@@ -51,9 +51,16 @@ $downloadOk = $false
 $coreContent = $null
 
 try {
-    $response = Invoke-WebRequest -Uri $coreUrl -UseBasicParsing -ErrorAction Stop
-    # On recupere le contenu texte (UTF-8) et on le sauvegarde aussi en local
+    # Force TLS 1.2 au cas où la machine est un peu vieille
+    [Net.ServicePointManager]::SecurityProtocol = `
+        [Net.SecurityProtocolType]::Tls12 -bor `
+        [Net.SecurityProtocolType]::Tls11 -bor `
+        [Net.SecurityProtocolType]::Tls
+
+    $response = Invoke-WebRequest -Uri $coreUrl -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop
     $coreContent = $response.Content
+
+    # On sauvegarde aussi en local
     $coreContent | Out-File -FilePath $CoreLocal -Encoding UTF8
     Write-Host "[OK] Core telecharge et enregistre localement." -ForegroundColor Green
     $downloadOk = $true

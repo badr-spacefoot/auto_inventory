@@ -29,16 +29,16 @@ Write-Host "  Version : $LAUNCHER_VERSION"
 Write-Host "==============================================" -ForegroundColor Cyan
 Write-Host ""
 
-# 1) Vérification config
+# 1) Vérification de la config
 if (!(Test-Path $Config)) {
     Write-Host "[ERREUR] Fichier config_inventory.json introuvable." -ForegroundColor Red
     Write-Host "Placez-le dans : $BaseDir" -ForegroundColor Yellow
     Write-Host ""
-    Read-Host "Appuyez sur ENTREE pour fermer"
+    Read-Host "Appuyez sur ENTRÉE pour fermer"
     exit
 }
 
-# 2) Download core
+# 2) Téléchargement du core
 Write-Host "Téléchargement de la dernière version du core..." -ForegroundColor White
 Write-Host "URL : $coreUrl" -ForegroundColor DarkGray
 
@@ -52,11 +52,11 @@ try {
     if (!(Test-Path $CoreLocal)) {
         Write-Host "[ERREUR] Aucun core disponible localement." -ForegroundColor Red
         Write-Host ""
-        Read-Host "Appuyez sur ENTREE pour fermer"
+        Read-Host "Appuyez sur ENTRÉE pour fermer"
         exit
     }
 
-    Write-Host "[INFO] Utilisation de la version locale." -ForegroundColor Yellow
+    Write-Host "[INFO] Utilisation de la version locale du core." -ForegroundColor Yellow
 }
 
 Write-Host ""
@@ -70,10 +70,10 @@ try {
     Write-Host "[ERREUR] Erreur lors de l'exécution du core." -ForegroundColor Red
     Write-Host $_.Exception.Message -ForegroundColor DarkGray
     Write-Host ""
-    Read-Host "Appuyez sur ENTREE pour fermer"
+    Read-Host "Appuyez sur ENTRÉE pour fermer"
     exit
 }
 
 Write-Host ""
 Write-Host "Fin du launcher." -ForegroundColor DarkGray
-Read-Host "Appuyez sur ENTREE pour fermer"
+Read-Host "Appuyez sur ENTRÉE pour fermer"

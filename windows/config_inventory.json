@@ -1,4 +1,7 @@
 {
+  "version": "1.4.3",
+  "webhook": "https://script.google.com/macros/s/REMPLACE_MOI/exec",
+
   "teams": [
     "B2C",
     "DG",
@@ -9,8 +12,9 @@
     "Compta",
     "RH"
   ],
+
   "sites": [
-    "Siège social :  Levallois-Perret",
+    "Siège social : Levallois-Perret",
     "R&D / Design : Charleville-Mézières",
     "Entrepôt logistique : Montlouis-sur-Loire",
     "Boutique : Boulevard-du-Golf (BDG)",

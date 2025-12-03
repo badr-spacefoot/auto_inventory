@@ -1,14 +1,20 @@
 @echo off
-:: ============================================================
-::  Spacefoot Auto Inventory - Windows Launcher (BAT)
-::  Lance le script PowerShell en UTF-8 sans clignoter
-:: ============================================================
+chcp 65001 >nul
 
-:: Se déplacer dans le dossier du .bat
-cd /d "%~dp0"
+echo.
+echo ==============================================
+echo   Spacefoot Auto Inventory - Windows Launcher
+echo ==============================================
+echo.
 
-:: Exécuter PowerShell en UTF-8 + bypass policy
-powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass ^
-    -Command "chcp 65001 > $null; [Console]::OutputEncoding=[System.Text.Encoding]::UTF8; & '%~dp0inventaire_windows_launcher.ps1'"
+REM Détection du répertoire du script
+set "SCRIPT_DIR=%~dp0"
 
-pause
+REM Lancer le launcher PowerShell en UTF-8
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%inventaire_windows_launcher.ps1"
+
+echo.
+echo ------------------------------------------------
+echo   Programme terminé. Appuyez sur une touche...
+echo ------------------------------------------------
+pause >nul

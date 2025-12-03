@@ -484,7 +484,7 @@ $finalChoice = $confResult[1]
 # =====================================================================
 Show-AppHeader "ENVOI DES DONNÉES / SENDING DATA" "Transmission vers Google Sheet / Sending to Google Sheet"
 
-if ($finalChoice -like "[ VALIDER*") {
+if ($finalChoice -match "VALIDER") {
     try {
         $response = Invoke-RestMethod -Uri $webhookUrl -Method Post -Body $body -ContentType "application/json"
         Center-Write "Inventaire envoyé avec succès. Merci ! / Inventory sent successfully. Thank you!" ([ConsoleColor]::Green)

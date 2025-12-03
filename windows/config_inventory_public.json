@@ -1,0 +1,22 @@
+{
+  "teams": [
+    "B2C",
+    "DG",
+    "MP",
+    "Pub",
+    "Cata",
+    "Design",
+    "Compta",
+    "RH"
+  ],
+  "sites": [
+    "Siège social :  Levallois-Perret",
+    "R&D / Design : Charleville-Mézières",
+    "Entrepôt logistique : Montlouis-sur-Loire",
+    "Boutique : Boulevard-du-Golf (BDG)",
+    "Boutique : Endurance-Store (ES)",
+    "Boutique : Foot-Store (FS)",
+    "Boutique : Paris-Ventoux-Cycles (PVC)",
+    "Boutique : Sport-et-Loisirs (SEL)"
+  ]
+}

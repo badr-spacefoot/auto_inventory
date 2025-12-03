@@ -29,7 +29,7 @@ Write-Host "  Version : $LAUNCHER_VERSION"
 Write-Host "==============================================" -ForegroundColor Cyan
 Write-Host ""
 
-# 1) Check config
+# 1) Vérification config
 if (!(Test-Path $Config)) {
     Write-Host "[ERREUR] Fichier config_inventory.json introuvable." -ForegroundColor Red
     Write-Host "Placez-le dans : $BaseDir" -ForegroundColor Yellow

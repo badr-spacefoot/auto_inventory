@@ -1,6 +1,6 @@
 # =====================================================================
 #   INVENTAIRE WINDOWS - Script principal (core)
-#   Version : v1.4.5 - 2025-12-03
+#   Version : v1.4.6 - 2025-12-03
 # =====================================================================
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -34,7 +34,7 @@ trap {
     exit 1
 }
 
-$VERSION = "v1.4.5"
+$VERSION = "v1.4.6"
 
 $AsciiBanner = @(
 "                                                                                     ",

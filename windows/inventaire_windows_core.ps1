@@ -1,16 +1,46 @@
 # =====================================================================
 #   INVENTAIRE WINDOWS - Script principal (core)
-#   Version par défaut : v1.4.3 - 2025-12-03
-#   Auteur  : Spacefoot / Badr
-#   Mode : simple -> EXE + config_inventory.json (même dossier)
+#   Version : v1.4.4 - 2025-12-03
 # =====================================================================
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 # ---------------------------------------------------------------------
+#  Gestion globale des erreurs : log + pause
+# ---------------------------------------------------------------------
+function Get-BaseDirectory {
+    if ($PSScriptRoot -and (Test-Path $PSScriptRoot)) {
+        return $PSScriptRoot
+    }
+    try {
+        $exePath = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+        $dir     = [System.IO.Path]::GetDirectoryName($exePath)
+        if (Test-Path $dir) { return $dir }
+    } catch { }
+    return (Get-Location).Path
+}
+
+$Global:INV_BaseDir = Get-BaseDirectory
+$Global:INV_LogFile = Join-Path $INV_BaseDir "inventory_error.log"
+
+trap {
+    $msg = "`n===== FATAL ERROR =====`n"
+    $msg += (Get-Date).ToString("yyyy-MM-dd HH:mm:ss") + "`n"
+    $msg += ($_ | Out-String) + "`n"
+    Add-Content -Path $INV_LogFile -Value $msg
+
+    Write-Host ""
+    Write-Host "Une erreur fatale est survenue. / A fatal error occurred." -ForegroundColor Red
+    Write-Host "Détails enregistrés dans : $INV_LogFile" -ForegroundColor DarkGray
+    Write-Host ""
+    Read-Host "Appuyez sur ENTREE pour fermer / Press ENTER to close"
+    exit 1
+}
+
+# ---------------------------------------------------------------------
 #  Version + ASCII banner
 # ---------------------------------------------------------------------
-$VERSION = "v1.4.3"
+$VERSION = "v1.4.4"
 
 $AsciiBanner = @(
 "                                                                                     ",
@@ -38,7 +68,12 @@ $AsciiBanner = @(
 #  Fonctions utilitaires UI
 # ---------------------------------------------------------------------
 function Get-WindowWidth {
-    return $Host.UI.RawUI.WindowSize.Width
+    try {
+        if ($Host -and $Host.UI -and $Host.UI.RawUI) {
+            return $Host.UI.RawUI.WindowSize.Width
+        }
+    } catch { }
+    return 80
 }
 
 function Center-Write {
@@ -48,10 +83,12 @@ function Center-Write {
         [ConsoleColor]$Background = [ConsoleColor]::Black
     )
     $width = Get-WindowWidth
+    if (-not $Text) { $Text = "" }
     if ($Text.Length -ge $width) {
         Write-Host $Text -ForegroundColor $Foreground -BackgroundColor $Background
     } else {
         $pad = [math]::Floor(($width - $Text.Length) / 2)
+        if ($pad -lt 0) { $pad = 0 }
         Write-Host ((" " * $pad) + $Text) -ForegroundColor $Foreground -BackgroundColor $Background
     }
 }
@@ -62,28 +99,31 @@ function Show-AppHeader {
         [string]$Subtitle
     )
 
-    Clear-Host
+    try {
+        $rawUI = $Host.UI.RawUI
+        $rawUI.BackgroundColor = 'Black'
+        $rawUI.ForegroundColor = 'White'
+        Clear-Host
+    } catch {
+        Clear-Host
+    }
 
     $width = Get-WindowWidth
 
-    # 1) ASCII banner (centered)
     foreach ($line in $AsciiBanner) {
         Center-Write $line ([ConsoleColor]::Cyan)
     }
 
-    # 2) Version bottom-right
     $versionText = "Version $VERSION"
     $padRight = [Math]::Max(0, $width - $versionText.Length)
     Write-Host ""
     Write-Host ((" " * $padRight) + $versionText) -ForegroundColor DarkGray
 
-    # 3) Slogan FR / EN (juste sous la bannière)
     Write-Host ""
     Center-Write "Inventaire aujourd’hui, sécurité demain." ([ConsoleColor]::Green)
     Center-Write "Inventory today, security tomorrow." ([ConsoleColor]::Green)
     Write-Host ""
 
-    # 4) Titre d’étape + sous-titre
     if ($StepTitle) {
         Center-Write $StepTitle ([ConsoleColor]::White)
     }
@@ -107,21 +147,21 @@ function Show-BoxCentered {
         if ($l.Length -gt $maxLen) { $maxLen = $l.Length }
     }
     $innerWidth = [Math]::Min($maxLen + 4, $width - 10)
+    if ($innerWidth -lt 20) { $innerWidth = 20 }
     $boxWidth   = $innerWidth + 2
     $leftMargin = [Math]::Floor(($width - $boxWidth) / 2)
+    if ($leftMargin -lt 0) { $leftMargin = 0 }
 
     $top    = "╔" + ("═" * $innerWidth) + "╗"
     $bottom = "╚" + ("═" * $innerWidth) + "╝"
 
     Write-Host (" " * $leftMargin + $top) -ForegroundColor DarkRed
 
-    # Titre
     $titlePadded = " " + $Title
     if ($titlePadded.Length -gt $innerWidth) { $titlePadded = $titlePadded.Substring(0, $innerWidth) }
     $titlePadded = $titlePadded.PadRight($innerWidth)
     Write-Host (" " * $leftMargin + "║" + $titlePadded + "║") -ForegroundColor White
 
-    # Ligne vide
     Write-Host (" " * $leftMargin + "║" + (" " * $innerWidth) + "║")
 
     foreach ($line in $Lines) {
@@ -146,23 +186,26 @@ function Show-MenuCentered {
     while ($true) {
         Show-AppHeader $StepTitle $Subtitle
 
-        $screenWidth  = $Host.UI.RawUI.WindowSize.Width
+        $screenWidth  = Get-WindowWidth
 
-        # Longueur max des options
         $maxLen = 0
         foreach ($o in $Options) {
             if ($o.Length -gt $maxLen) { $maxLen = $o.Length }
         }
 
-        $innerWidth = [Math]::Min($maxLen + 6, $screenWidth - 10)   # inside box
-        $boxWidth   = $innerWidth + 2                               # borders
+        $innerWidth = [Math]::Min($maxLen + 6, $screenWidth - 10)
+        if ($innerWidth -lt 20) { $innerWidth = 20 }
+        $boxWidth   = $innerWidth + 2
         $leftMargin = [Math]::Floor(($screenWidth - $boxWidth) / 2)
+        if ($leftMargin -lt 0) { $leftMargin = 0 }
 
         function _pad-inner([string]$text, [int]$w) {
             if ($null -eq $text) { $text = "" }
             if ($text.Length -gt $w) { $text = $text.Substring(0, $w) }
             $padLeft  = [Math]::Floor(($w - $text.Length) / 2)
             $padRight = $w - $padLeft - $text.Length
+            if ($padLeft -lt 0) { $padLeft = 0 }
+            if ($padRight -lt 0) { $padRight = 0 }
             return (" " * $padLeft) + $text + (" " * $padRight)
         }
 
@@ -173,7 +216,6 @@ function Show-MenuCentered {
         $bottomLine = "╚" + ("═" * $innerWidth) + "╝"
 
         Write-Host (" " * $leftMargin + $topLine) -ForegroundColor DarkRed
-        # Ligne vide avant options
         Write-Host (" " * $leftMargin + "║" + (" " * $innerWidth) + "║")
 
         for ($i = 0; $i -lt $Options.Length; $i++) {
@@ -188,13 +230,13 @@ function Show-MenuCentered {
             }
         }
 
-        # Ligne vide après options
         Write-Host (" " * $leftMargin + "║" + (" " * $innerWidth) + "║")
         Write-Host (" " * $leftMargin + $bottomLine) -ForegroundColor DarkRed
 
         Write-Host ""
         $hint = "HAUT/BAS + ENTREE pour valider / Use UP/DOWN + ENTER to confirm"
         $hintPad = [Math]::Floor(($screenWidth - $hint.Length) / 2)
+        if ($hintPad -lt 0) { $hintPad = 0 }
         Write-Host ((" " * $hintPad) + $hint)
 
         $key = [Console]::ReadKey($true)
@@ -207,28 +249,13 @@ function Show-MenuCentered {
 }
 
 # ---------------------------------------------------------------------
-#  Détection du dossier et chargement config_inventory.json local
+#  CHARGEMENT CONFIG LOCALE
 # ---------------------------------------------------------------------
-function Get-BaseDirectory {
-    if ($PSScriptRoot -and (Test-Path $PSScriptRoot)) {
-        return $PSScriptRoot
-    }
-
-    try {
-        $exePath = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
-        $dir     = [System.IO.Path]::GetDirectoryName($exePath)
-        if (Test-Path $dir) { return $dir }
-    } catch { }
-
-    return (Get-Location).Path
-}
-
-$BaseDir = Get-BaseDirectory()
-$configPath = Join-Path $BaseDir "config_inventory.json"
+$configPath = Join-Path $INV_BaseDir "config_inventory.json"
 
 if (!(Test-Path $configPath)) {
     Show-AppHeader "ERREUR CONFIG / CONFIG ERROR" ""
-    Show-BoxCentered -Title "ERREUR : CONFIG INTRouvable / CONFIG NOT FOUND" -Lines @(
+    Show-BoxCentered -Title "CONFIG INTRouvable / CONFIG NOT FOUND" -Lines @(
         "Fichier 'config_inventory.json' introuvable.",
         "File 'config_inventory.json' not found.",
         "",
@@ -236,8 +263,7 @@ if (!(Test-Path $configPath)) {
         "Place this file in the same folder as the application."
     )
     Write-Host ""
-    Center-Write "Appuyez sur ENTREE pour fermer / Press ENTER to close" ([ConsoleColor]::White)
-    [Console]::ReadKey($true) | Out-Null
+    Read-Host "Appuyez sur ENTREE pour fermer / Press ENTER to close"
     exit 1
 }
 
@@ -253,15 +279,11 @@ try {
         $_.Exception.Message
     )
     Write-Host ""
-    Center-Write "Appuyez sur ENTREE pour fermer / Press ENTER to close" ([ConsoleColor]::White)
-    [Console]::ReadKey($true) | Out-Null
+    Read-Host "Appuyez sur ENTREE pour fermer / Press ENTER to close"
     exit 1
 }
 
-# Si la config a un champ version, on peut override la version affichée
-if ($config.version) {
-    $VERSION = $config.version
-}
+if ($config.version) { $VERSION = $config.version }
 
 $webhookUrl = $config.webhook
 if ([string]::IsNullOrWhiteSpace($webhookUrl)) {
@@ -271,8 +293,7 @@ if ([string]::IsNullOrWhiteSpace($webhookUrl)) {
         "Key 'webhook' is missing or empty."
     )
     Write-Host ""
-    Center-Write "Appuyez sur ENTREE pour fermer / Press ENTER to close" ([ConsoleColor]::White)
-    [Console]::ReadKey($true) | Out-Null
+    Read-Host "Appuyez sur ENTREE pour fermer / Press ENTER to close"
     exit 1
 }
 
@@ -283,8 +304,7 @@ if (-not $config.teams -or $config.teams.Count -eq 0) {
         "No 'teams' defined in the file."
     )
     Write-Host ""
-    Center-Write "Appuyez sur ENTREE pour fermer / Press ENTER to close" ([ConsoleColor]::White)
-    [Console]::ReadKey($true) | Out-Null
+    Read-Host "Appuyez sur ENTREE pour fermer / Press ENTER to close"
     exit 1
 }
 
@@ -295,8 +315,7 @@ if (-not $config.sites -or $config.sites.Count -eq 0) {
         "No 'sites' defined in the file."
     )
     Write-Host ""
-    Center-Write "Appuyez sur ENTREE pour fermer / Press ENTER to close" ([ConsoleColor]::White)
-    [Console]::ReadKey($true) | Out-Null
+    Read-Host "Appuyez sur ENTREE pour fermer / Press ENTER to close"
     exit 1
 }
 
@@ -304,8 +323,9 @@ $teams = @($config.teams)
 $sites = @($config.sites)
 
 # =====================================================================
-#   ETAPE 1/4 - INTRO
+#   FLOW NORMAL (intro, identité, team, site, collecte, envoi)
 # =====================================================================
+
 Show-AppHeader "ÉTAPE 1/4 — INTRODUCTION / INTRO" "Inventaire des postes Spacefoot / Spacefoot device inventory"
 
 $introLines = @"
@@ -316,7 +336,6 @@ $introLines = @"
 [EN] This program automatically collects TECHNICAL information
      about your computer (model, serial number, OS, CPU, RAM,
      internal IP, MAC...). No personal data is collected.
-
 "@ -split "`n"
 
 foreach ($l in $introLines) {
@@ -326,9 +345,6 @@ Write-Host ""
 Center-Write "Appuyez sur ENTREE pour continuer / Press ENTER to continue" ([ConsoleColor]::Gray)
 [Console]::ReadKey($true) | Out-Null
 
-# =====================================================================
-#   ETAPE 1/4 - IDENTITE UTILISATEUR
-# =====================================================================
 Show-AppHeader "ÉTAPE 1/4 — IDENTITÉ UTILISATEUR / USER IDENTITY" "Renseignez vos informations / Please enter your information"
 
 Write-Host ""
@@ -344,9 +360,6 @@ if (-not [string]::IsNullOrWhiteSpace($lastName)) {
     $lastName = $lastName.ToUpper()
 }
 
-# =====================================================================
-#   ETAPE 2/4 - TEAM
-# =====================================================================
 $teamOptions = @()
 for ($i = 0; $i -lt $teams.Count; $i++) {
     $teamOptions += ("[{0}] {1}" -f ($i + 1), $teams[$i])
@@ -360,9 +373,6 @@ $teamResult = Show-MenuCentered `
 $teamIndex = $teamResult[0]
 $teamLabel = $teams[$teamIndex]
 
-# =====================================================================
-#   ETAPE 3/4 - ETABLISSEMENT
-# =====================================================================
 $siteOptions = @()
 for ($i = 0; $i -lt $sites.Count; $i++) {
     $siteOptions += ("[{0}] {1}" -f ($i + 1), $sites[$i])
@@ -376,9 +386,6 @@ $siteResult = Show-MenuCentered `
 $siteIndex = $siteResult[0]
 $siteLabel = $sites[$siteIndex]
 
-# =====================================================================
-#   ETAPE 3/4 - COLLECTE TECHNIQUE
-# =====================================================================
 Show-AppHeader "ÉTAPE 3/4 — COLLECTE TECHNIQUE / TECHNICAL SCAN" "Récupération automatique des infos / Automatically collecting system info"
 Center-Write "Veuillez patienter... / Please wait..." ([ConsoleColor]::Gray)
 Write-Host ""
@@ -400,9 +407,6 @@ $MAC = (Get-NetAdapter |
         Where-Object { $_.Status -eq "Up" } |
         Select-Object -First 1 -ExpandProperty MacAddress)
 
-# =====================================================================
-#   PREPARATION JSON
-# =====================================================================
 $body = @{
     firstName    = $firstName
     lastName     = $lastName
@@ -421,9 +425,6 @@ $body = @{
     mac          = $MAC
 } | ConvertTo-Json -Depth 5
 
-# =====================================================================
-#   ETAPE 4/4 - RECAP (ECRAN 1)
-# =====================================================================
 Show-AppHeader "ÉTAPE 4/4 — RÉCAPITULATIF / SUMMARY" "Vérifiez les informations / Check the information"
 
 $recapLines = @(
@@ -451,9 +452,6 @@ Center-Write "Si tout est correct, continuez. / If everything is correct, contin
 Center-Write "Appuyez sur ENTREE pour passer à la confirmation / Press ENTER to go to confirmation" ([ConsoleColor]::Gray)
 [Console]::ReadKey($true) | Out-Null
 
-# =====================================================================
-#   ETAPE 4/4 - CONFIRMATION (ECRAN 2)
-# =====================================================================
 $confirmOptions = @("[ VALIDER / CONFIRM ]", "[ ANNULER / CANCEL ]")
 
 $confResult  = Show-MenuCentered `
@@ -463,9 +461,6 @@ $confResult  = Show-MenuCentered `
 
 $finalChoice = $confResult[1]
 
-# =====================================================================
-#   ENVOI
-# =====================================================================
 Show-AppHeader "ENVOI DES DONNÉES / SENDING DATA" "Transmission vers Google Sheet / Sending to Google Sheet"
 
 if ($finalChoice -match "VALIDER") {

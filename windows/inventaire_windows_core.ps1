@@ -1,58 +1,16 @@
 # =====================================================================
 #   INVENTAIRE WINDOWS - Script principal (core)
-#   Version : v1.4.2 - 2025-12-03
+#   Version par défaut : v1.4.3 - 2025-12-03
 #   Auteur  : Spacefoot / Badr
+#   Mode : simple -> EXE + config_inventory.json (même dossier)
 # =====================================================================
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 # ---------------------------------------------------------------------
-#  Sécurité : le core doit être lancé via le launcher
-# ---------------------------------------------------------------------
-if ($env:SPACEFOOT_INVENTAIRE -ne "1") {
-    Write-Host "====================================================" -ForegroundColor Red
-    Write-Host "  EXECUTION NON AUTORISEE / UNAUTHORIZED EXECUTION" -ForegroundColor Red
-    Write-Host "====================================================" -ForegroundColor Red
-    Write-Host "Ce script doit etre lance via le launcher officiel." -ForegroundColor White
-    Write-Host "This script must be started via the official launcher." -ForegroundColor White
-    Start-Sleep -Seconds 8
-    exit 1
-}
-
-# ---------------------------------------------------------------------
-#  UI : couleurs + tentative plein écran
-# ---------------------------------------------------------------------
-$rawUI = $Host.UI.RawUI
-$rawUI.BackgroundColor = 'Black'
-$rawUI.ForegroundColor = 'White'
-Clear-Host
-
-try {
-    Add-Type @'
-using System;
-using System.Runtime.InteropServices;
-public class Win32 {
-    [DllImport("user32.dll")]
-    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-}
-'@ -ErrorAction SilentlyContinue
-
-    $handle = (Get-Process -Id $pid).MainWindowHandle
-    if ($handle -ne [IntPtr]::Zero) {
-        # 3 = SW_MAXIMIZE
-        [Win32]::ShowWindow($handle, 3) | Out-Null
-    }
-} catch {
-    # Si ça échoue, ce n'est pas bloquant
-}
-
-Start-Sleep -Milliseconds 200
-Clear-Host
-
-# ---------------------------------------------------------------------
 #  Version + ASCII banner
 # ---------------------------------------------------------------------
-$VERSION = "v1.4.2"
+$VERSION = "v1.4.3"
 
 $AsciiBanner = @(
 "                                                                                     ",
@@ -119,13 +77,13 @@ function Show-AppHeader {
     Write-Host ""
     Write-Host ((" " * $padRight) + $versionText) -ForegroundColor DarkGray
 
-    # 3) Slogan FR / EN (just under banner)
+    # 3) Slogan FR / EN (juste sous la bannière)
     Write-Host ""
     Center-Write "Inventaire aujourd’hui, sécurité demain." ([ConsoleColor]::Green)
     Center-Write "Inventory today, security tomorrow." ([ConsoleColor]::Green)
     Write-Host ""
 
-    # 4) Step Title + Subtitle (FR / EN)
+    # 4) Titre d’étape + sous-titre
     if ($StepTitle) {
         Center-Write $StepTitle ([ConsoleColor]::White)
     }
@@ -157,13 +115,13 @@ function Show-BoxCentered {
 
     Write-Host (" " * $leftMargin + $top) -ForegroundColor DarkRed
 
-    # titre
+    # Titre
     $titlePadded = " " + $Title
     if ($titlePadded.Length -gt $innerWidth) { $titlePadded = $titlePadded.Substring(0, $innerWidth) }
     $titlePadded = $titlePadded.PadRight($innerWidth)
     Write-Host (" " * $leftMargin + "║" + $titlePadded + "║") -ForegroundColor White
 
-    # ligne vide
+    # Ligne vide
     Write-Host (" " * $leftMargin + "║" + (" " * $innerWidth) + "║")
 
     foreach ($line in $Lines) {
@@ -215,7 +173,7 @@ function Show-MenuCentered {
         $bottomLine = "╚" + ("═" * $innerWidth) + "╝"
 
         Write-Host (" " * $leftMargin + $topLine) -ForegroundColor DarkRed
-        # ligne vide avant options
+        # Ligne vide avant options
         Write-Host (" " * $leftMargin + "║" + (" " * $innerWidth) + "║")
 
         for ($i = 0; $i -lt $Options.Length; $i++) {
@@ -230,7 +188,7 @@ function Show-MenuCentered {
             }
         }
 
-        # ligne vide après options
+        # Ligne vide après options
         Write-Host (" " * $leftMargin + "║" + (" " * $innerWidth) + "║")
         Write-Host (" " * $leftMargin + $bottomLine) -ForegroundColor DarkRed
 
@@ -248,26 +206,38 @@ function Show-MenuCentered {
     }
 }
 
-# =====================================================================
-#   CHARGEMENT CONFIG (webhook + listes teams/sites)
-# =====================================================================
+# ---------------------------------------------------------------------
+#  Détection du dossier et chargement config_inventory.json local
+# ---------------------------------------------------------------------
+function Get-BaseDirectory {
+    if ($PSScriptRoot -and (Test-Path $PSScriptRoot)) {
+        return $PSScriptRoot
+    }
 
-$baseDir = $env:SPACEFOOT_CONFIGDIR
-if ([string]::IsNullOrWhiteSpace($baseDir)) {
-    $baseDir = (Get-Location).Path
+    try {
+        $exePath = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+        $dir     = [System.IO.Path]::GetDirectoryName($exePath)
+        if (Test-Path $dir) { return $dir }
+    } catch { }
+
+    return (Get-Location).Path
 }
 
-$configPath = Join-Path $baseDir "config_inventory.json"
+$BaseDir = Get-BaseDirectory()
+$configPath = Join-Path $BaseDir "config_inventory.json"
 
 if (!(Test-Path $configPath)) {
     Show-AppHeader "ERREUR CONFIG / CONFIG ERROR" ""
-    Show-BoxCentered -Title "ERREUR CONFIG / CONFIG ERROR" -Lines @(
+    Show-BoxCentered -Title "ERREUR : CONFIG INTRouvable / CONFIG NOT FOUND" -Lines @(
         "Fichier 'config_inventory.json' introuvable.",
         "File 'config_inventory.json' not found.",
-        "Placez-le dans le même dossier que le launcher.",
-        "Put it in the same folder as the launcher."
+        "",
+        "Placez ce fichier dans le même dossier que l'application.",
+        "Place this file in the same folder as the application."
     )
-    Start-Sleep -Seconds 10
+    Write-Host ""
+    Center-Write "Appuyez sur ENTREE pour fermer / Press ENTER to close" ([ConsoleColor]::White)
+    [Console]::ReadKey($true) | Out-Null
     exit 1
 }
 
@@ -276,13 +246,21 @@ try {
     $config = $configJson | ConvertFrom-Json
 } catch {
     Show-AppHeader "ERREUR LECTURE CONFIG / CONFIG READ ERROR" ""
-    Show-BoxCentered -Title "ERREUR LECTURE CONFIG / CONFIG READ ERROR" -Lines @(
+    Show-BoxCentered -Title "ERREUR CONFIG / CONFIG ERROR" -Lines @(
         "Impossible de lire ou parser 'config_inventory.json'.",
         "Unable to read or parse 'config_inventory.json'.",
+        "",
         $_.Exception.Message
     )
-    Start-Sleep -Seconds 10
+    Write-Host ""
+    Center-Write "Appuyez sur ENTREE pour fermer / Press ENTER to close" ([ConsoleColor]::White)
+    [Console]::ReadKey($true) | Out-Null
     exit 1
+}
+
+# Si la config a un champ version, on peut override la version affichée
+if ($config.version) {
+    $VERSION = $config.version
 }
 
 $webhookUrl = $config.webhook
@@ -292,7 +270,9 @@ if ([string]::IsNullOrWhiteSpace($webhookUrl)) {
         "La clé 'webhook' est absente ou vide.",
         "Key 'webhook' is missing or empty."
     )
-    Start-Sleep -Seconds 10
+    Write-Host ""
+    Center-Write "Appuyez sur ENTREE pour fermer / Press ENTER to close" ([ConsoleColor]::White)
+    [Console]::ReadKey($true) | Out-Null
     exit 1
 }
 
@@ -302,7 +282,9 @@ if (-not $config.teams -or $config.teams.Count -eq 0) {
         "Aucune 'team' définie dans le fichier.",
         "No 'teams' defined in the file."
     )
-    Start-Sleep -Seconds 10
+    Write-Host ""
+    Center-Write "Appuyez sur ENTREE pour fermer / Press ENTER to close" ([ConsoleColor]::White)
+    [Console]::ReadKey($true) | Out-Null
     exit 1
 }
 
@@ -312,7 +294,9 @@ if (-not $config.sites -or $config.sites.Count -eq 0) {
         "Aucun 'site' défini dans le fichier.",
         "No 'sites' defined in the file."
     )
-    Start-Sleep -Seconds 10
+    Write-Host ""
+    Center-Write "Appuyez sur ENTREE pour fermer / Press ENTER to close" ([ConsoleColor]::White)
+    [Console]::ReadKey($true) | Out-Null
     exit 1
 }
 
@@ -443,22 +427,22 @@ $body = @{
 Show-AppHeader "ÉTAPE 4/4 — RÉCAPITULATIF / SUMMARY" "Vérifiez les informations / Check the information"
 
 $recapLines = @(
-    "Prénom / First name : $firstName",
-    "Nom / Last name    : $lastName",
-    "Team / Team        : $teamLabel",
+    "Prénom / First name  : $firstName",
+    "Nom / Last name     : $lastName",
+    "Team / Team         : $teamLabel",
     "Établissement / Site: $siteLabel",
     "",
-    "Type OS / OS type  : Windows",
-    "Nom du PC / Host   : $PCName",
-    "Utilisateur / User : $User",
-    "Fabricant / Vendor : $($Sys.Manufacturer)",
-    "Modèle / Model     : $($Sys.Model)",
-    "N° série / Serial  : $($BIOS.SerialNumber)",
-    "Système / System   : $($OS.Caption) $($OS.Version)",
-    "CPU                : $($CPU.Name)",
-    "RAM                : ${RAM} GB",
-    "IP interne / IP    : $IP",
-    "MAC                : $MAC"
+    "Type OS / OS type   : Windows",
+    "Nom du PC / Host    : $PCName",
+    "Utilisateur / User  : $User",
+    "Fabricant / Vendor  : $($Sys.Manufacturer)",
+    "Modèle / Model      : $($Sys.Model)",
+    "N° série / Serial   : $($BIOS.SerialNumber)",
+    "Système / System    : $($OS.Caption) $($OS.Version)",
+    "CPU                 : $($CPU.Name)",
+    "RAM                 : ${RAM} GB",
+    "IP interne / IP     : $IP",
+    "MAC                 : $MAC"
 )
 
 Show-BoxCentered -Title "RÉCAPITULATIF / SUMMARY" -Lines $recapLines
@@ -507,3 +491,4 @@ if ($finalChoice -match "VALIDER") {
 Write-Host ""
 Center-Write "Cette fenêtre se fermera dans 10 secondes... / This window will close in 10 seconds..." ([ConsoleColor]::White)
 Start-Sleep -Seconds 10
+exit

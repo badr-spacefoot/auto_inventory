@@ -2,12 +2,14 @@
 #   BUILD INVENTORY  - Compiler le script en EXE
 # =============================================================
 
-# Paramètres
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
 $SourceFile = "inventaire_windows_core.ps1"
 $OutputFile = "inventaire_windows.exe"
+$IconFile   = Join-Path $PSScriptRoot "icon.ico"   # optionnel
 
 Write-Host "`n==============================" -ForegroundColor Cyan
-Write-Host "  AutoInventory - Build EXE" -ForegroundColor Cyan
+Write-Host "  AutoInventory - Build EXE"     -ForegroundColor Cyan
 Write-Host "==============================`n" -ForegroundColor Cyan
 
 # Vérification du fichier source
@@ -16,18 +18,33 @@ if (-not (Test-Path $SourceFile)) {
     exit 1
 }
 
-# Chemin du compilateur PS2EXE
-$PS2EXE = "$PSScriptRoot\ps2exe\ps2exe.ps1"
+# Vérifier / installer ps2exe
+Write-Host "Vérification du module 'ps2exe'..." -ForegroundColor White
+$ps2exeModule = Get-Module -ListAvailable | Where-Object { $_.Name -eq "ps2exe" }
 
-if (-not (Test-Path $PS2EXE)) {
+if (-not $ps2exeModule) {
     Write-Host "[INFO] ps2exe non trouvé. Installation..." -ForegroundColor Yellow
-    Install-Module ps2exe -Force -Scope CurrentUser
+    try {
+        Install-Module ps2exe -Scope CurrentUser -Force -ErrorAction Stop
+    } catch {
+        Write-Host "[ERREUR] Impossible d'installer 'ps2exe'." -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor DarkGray
+        exit 1
+    }
 }
+
+Import-Module ps2exe -ErrorAction SilentlyContinue
 
 # Compilation
 Write-Host "Compilation en cours..." -ForegroundColor Yellow
 
-Invoke-ps2exe $SourceFile $OutputFile -noConsole -icon "$PSScriptRoot\icon.ico"
+# On veut garder la console (UI ASCII), donc NO CONSOLE = $false
+if (Test-Path $IconFile) {
+    Invoke-ps2exe -inputFile $SourceFile -outputFile $OutputFile -noConsole:$false -iconFile $IconFile
+} else {
+    # Pas d'icône -> on compile sans
+    Invoke-ps2exe -inputFile $SourceFile -outputFile $OutputFile -noConsole:$false
+}
 
 if (Test-Path $OutputFile) {
     Write-Host "`n[OK] Compilation réussie !" -ForegroundColor Green

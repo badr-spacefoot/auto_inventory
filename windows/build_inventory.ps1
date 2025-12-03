@@ -1,24 +1,22 @@
 # =============================================================
-#   BUILD INVENTORY  - Compiler le script en EXE
+#   BUILD INVENTORY  - Compiler le LAUNCHER en EXE
 # =============================================================
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-$SourceFile = "inventaire_windows_core.ps1"
+$SourceFile = "inventaire_windows_launcher.ps1"
 $OutputFile = "inventaire_windows.exe"
 $IconFile   = Join-Path $PSScriptRoot "icon.ico"   # optionnel
 
 Write-Host "`n==============================" -ForegroundColor Cyan
-Write-Host "  AutoInventory - Build EXE"     -ForegroundColor Cyan
+Write-Host "  AutoInventory - Build LAUNCHER EXE" -ForegroundColor Cyan
 Write-Host "==============================`n" -ForegroundColor Cyan
 
-# Vérification du fichier source
 if (-not (Test-Path $SourceFile)) {
     Write-Host "[ERREUR] Le fichier source n'existe pas : $SourceFile" -ForegroundColor Red
     exit 1
 }
 
-# Vérifier / installer ps2exe
 Write-Host "Vérification du module 'ps2exe'..." -ForegroundColor White
 $ps2exeModule = Get-Module -ListAvailable | Where-Object { $_.Name -eq "ps2exe" }
 
@@ -35,14 +33,11 @@ if (-not $ps2exeModule) {
 
 Import-Module ps2exe -ErrorAction SilentlyContinue
 
-# Compilation
 Write-Host "Compilation en cours..." -ForegroundColor Yellow
 
-# On veut garder la console (UI ASCII), donc NO CONSOLE = $false
 if (Test-Path $IconFile) {
     Invoke-ps2exe -inputFile $SourceFile -outputFile $OutputFile -noConsole:$false -iconFile $IconFile
 } else {
-    # Pas d'icône -> on compile sans
     Invoke-ps2exe -inputFile $SourceFile -outputFile $OutputFile -noConsole:$false
 }
 

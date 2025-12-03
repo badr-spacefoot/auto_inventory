@@ -1,13 +1,7 @@
 @echo off
-REM ============================================================
-REM  Inventaire Windows - Launcher batch (DEBUG FRIENDLY)
-REM ============================================================
+SET SPACEFOOT_INVENTAIRE=1
+SET SPACEFOOT_CONFIGDIR=%~dp0
 
-chcp 65001 >nul
+powershell -ExecutionPolicy Bypass -NoLogo -NoProfile -WindowStyle Normal -File "%~dp0inventaire_windows_core.ps1"
 
-REM On garde la fenetre ouverte avec -NoExit pour voir les erreurs
-powershell -NoExit -ExecutionPolicy Bypass -File "%~dp0inventaire_windows_launcher.ps1"
-
-echo.
-echo (Appuyez sur une touche pour fermer cette fenetre)
-pause >nul
+exit

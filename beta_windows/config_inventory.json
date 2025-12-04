@@ -4,11 +4,15 @@
 
   "teams": [
     "B2C",
+    "Cata",
     "DG",
     "MP",
     "Pub",
-    "Cata",
+    "Biz-Dev",
+    "Achat/LOG",
+    "LOG",
     "Design",
+    "SAV",
     "Compta",
     "RH"
   ],

@@ -9,10 +9,12 @@
     "MP",
     "Pub",
     "Biz-Dev",
+    "Achat",
+    "LOG",
     "Design",
     "SAV",
     "Compta",
-    "RH"
+    "RH",
   ],
 
   "sites": [
